@@ -1,0 +1,13 @@
+[package]
+name = "bevy-midi-graph"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.14.2"
+ron = "0.8.1"
+midi-graph = { git = "https://github.com/grimace87/midi-graph.git" }
+
+[dev-dependencies]
+bevy_rapier3d = "0.27.0"
+
