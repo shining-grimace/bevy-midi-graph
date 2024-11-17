@@ -10,4 +10,5 @@ midi-graph = { git = "https://github.com/grimace87/midi-graph.git" }
 
 [dev-dependencies]
 avian3d = "0.1.2"
+bevy = { version = "0.14.2", features = ["jpeg"] }
 
