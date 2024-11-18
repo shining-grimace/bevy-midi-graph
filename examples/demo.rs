@@ -1,6 +1,6 @@
+use avian3d::prelude::*;
 use bevy::{asset::LoadState, prelude::*};
 use bevy_midi_graph::{MidiGraphAsset, MidiGraphAudioContext, MidiGraphPlugin};
-use bevy_rapier3d::{control::KinematicCharacterController, prelude::*};
 use midi_graph::{EventChannel, NodeControlEvent, NodeEvent};
 
 const PLAYER_VELOCITY: f32 = 3.0;
@@ -18,9 +18,11 @@ struct GraphAssetLoading(Handle<MidiGraphAsset>);
 pub fn main() {
     App::new()
         .insert_resource(GraphAssetLoading::default())
-        .add_plugins(DefaultPlugins)
-        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugins(MidiGraphPlugin)
+        .add_plugins((DefaultPlugins, PhysicsPlugins::default(), MidiGraphPlugin))
+        .insert_resource(AmbientLight {
+            color: Color::WHITE,
+            brightness: 1000.0,
+        })
         .add_systems(Startup, setup)
         .add_systems(Update, (move_character, check_graph_ready))
         .add_systems(PostUpdate, check_intersections)
@@ -38,39 +40,37 @@ fn setup(
         transform: Transform::from_xyz(0.0, 1.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
-    commands.spawn(PbrBundle {
-        transform: Transform::from_translation(Vec3::ZERO),
-        mesh: meshes.add(Plane3d::new(Vec3::Y, Vec2::splat(10.0))),
-        material: materials.add(StandardMaterial {
-            base_color: Color::srgb(0.5, 0.2, 0.2),
-            ..default()
-        }),
-        ..default()
-    });
     commands.spawn((
-        Player,
-        Velocity::zero(),
-        KinematicCharacterController {
-            translation: Some(Vect::new(0.0, 1.0, 0.0)),
-            up: Vect::Y,
+        Collider::cuboid(20.0, 1.0, 20.0),
+        RigidBody::Static,
+        PbrBundle {
+            mesh: meshes.add(Cuboid::new(20.0, 1.0, 20.0)),
+            material: materials.add(StandardMaterial {
+                base_color: Color::srgb(0.5, 0.2, 0.2),
+                ..default()
+            }),
+            transform: Transform::from_xyz(0.0, -0.5, 0.0),
             ..default()
         },
-        Collider::cylinder(1.0, 0.5),
-        RigidBody::KinematicVelocityBased,
-        ActiveEvents::COLLISION_EVENTS,
-        ActiveCollisionTypes::KINEMATIC_STATIC,
+    ));
+    commands.spawn((
+        Player,
+        LinearVelocity::ZERO,
+        Collider::cylinder(0.5, 2.0),
+        RigidBody::Dynamic,
         PbrBundle {
             mesh: meshes.add(Cylinder::new(0.5, 2.0)),
             material: materials.add(StandardMaterial {
                 base_color: Color::srgb(0.3, 0.3, 0.8),
                 ..default()
             }),
+            transform: Transform::from_xyz(0.0, 1.0, 0.0),
             ..default()
         },
     ));
     commands.spawn((
         Sensor,
-        Collider::cuboid(3.0, 3.0, 3.0),
+        Collider::cuboid(6.0, 6.0, 6.0),
         PbrBundle {
             mesh: meshes.add(Cuboid::new(6.0, 6.0, 6.0)),
             material: materials.add(StandardMaterial {
@@ -107,7 +107,7 @@ fn check_graph_ready(
 }
 
 fn move_character(
-    mut player_velocity_query: Query<&mut Velocity, With<Player>>,
+    mut player_velocity_query: Query<&mut LinearVelocity, With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut quit_signal: EventWriter<AppExit>,
 ) {
@@ -137,7 +137,7 @@ fn move_character(
     } else {
         Vec3::ZERO
     };
-    *player_velocity = Velocity::linear(PLAYER_VELOCITY * input_velocity);
+    *player_velocity = LinearVelocity(PLAYER_VELOCITY * input_velocity);
 
     if quit {
         quit_signal.send(AppExit::Success);
@@ -146,18 +146,31 @@ fn move_character(
 
 fn check_intersections(
     graph: Res<GraphAssetLoading>,
-    rapier_context: Res<RapierContext>,
     mut audio_context: ResMut<MidiGraphAudioContext>,
     player_query: Query<Entity, With<Player>>,
     sensor_query: Query<Entity, With<Sensor>>,
+    mut collision_started_events: EventReader<CollisionStarted>,
+    mut collision_ended_events: EventReader<CollisionEnded>,
     mut graphs: ResMut<Assets<MidiGraphAsset>>,
     mut current_anchor: Local<u32>,
 ) {
     let player_entity = player_query.get_single().unwrap();
     let sensor_entity = sensor_query.get_single().unwrap();
-    let desired_track = match rapier_context.intersection_pair(player_entity, sensor_entity) {
-        Some(true) => ENTER_TENSION_ANCHOR,
-        _ => DEFAULT_ANCHOR,
+    let started = collision_started_events.read().any(|event| {
+        println!("Started: {}, {}", player_entity, sensor_entity);
+        (event.0 == player_entity && event.1 == sensor_entity)
+            || (event.0 == sensor_entity && event.1 == player_entity)
+    });
+    let ended = collision_ended_events.read().any(|event| {
+        (event.0 == player_entity && event.1 == sensor_entity)
+            || (event.0 == sensor_entity && event.1 == player_entity)
+    });
+    let desired_track = if started {
+        ENTER_TENSION_ANCHOR
+    } else if ended {
+        DEFAULT_ANCHOR
+    } else {
+        return;
     };
     if *current_anchor != desired_track {
         *current_anchor = desired_track;
