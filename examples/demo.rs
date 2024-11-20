@@ -36,50 +36,41 @@ fn setup(
     mut graph_asset: ResMut<GraphAssetLoading>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 1.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(0.0, 1.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
     commands.spawn((
         Collider::cuboid(20.0, 1.0, 20.0),
         RigidBody::Static,
-        PbrBundle {
-            mesh: meshes.add(Cuboid::new(20.0, 1.0, 20.0)),
-            material: materials.add(StandardMaterial {
-                base_color: Color::srgb(0.5, 0.2, 0.2),
-                ..default()
-            }),
-            transform: Transform::from_xyz(0.0, -0.5, 0.0),
+        Mesh3d(meshes.add(Cuboid::new(20.0, 1.0, 20.0))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.5, 0.2, 0.2),
             ..default()
-        },
+        })),
+        Transform::from_xyz(0.0, -0.5, 0.0),
     ));
     commands.spawn((
         Player,
         LinearVelocity::ZERO,
         Collider::cylinder(0.5, 2.0),
         RigidBody::Dynamic,
-        PbrBundle {
-            mesh: meshes.add(Cylinder::new(0.5, 2.0)),
-            material: materials.add(StandardMaterial {
-                base_color: Color::srgb(0.3, 0.3, 0.8),
-                ..default()
-            }),
-            transform: Transform::from_xyz(0.0, 1.0, 0.0),
+        Mesh3d(meshes.add(Cylinder::new(0.5, 2.0))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.3, 0.3, 0.8),
             ..default()
-        },
+        })),
+        Transform::from_xyz(0.0, 1.0, 0.0),
     ));
     commands.spawn((
         Sensor,
         Collider::cuboid(6.0, 6.0, 6.0),
-        PbrBundle {
-            mesh: meshes.add(Cuboid::new(6.0, 6.0, 6.0)),
-            material: materials.add(StandardMaterial {
-                base_color: Color::srgb(0.3, 0.8, 0.3),
-                ..default()
-            }),
-            transform: Transform::from_xyz(-5.0, 3.0, -2.0),
+        Mesh3d(meshes.add(Cuboid::new(6.0, 6.0, 6.0))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.3, 0.8, 0.3),
             ..default()
-        },
+        })),
+        Transform::from_xyz(-5.0, 3.0, -2.0),
     ));
     graph_asset.0 = asset_server.load("demo/graph.ron");
 }

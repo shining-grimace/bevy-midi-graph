@@ -15,42 +15,36 @@ impl Plugin for SplashPlugin {
 struct SplashUiRoot;
 
 fn init_loading_ui(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
     commands
         .spawn((
             SplashUiRoot,
-            NodeBundle {
-                style: Style {
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::End,
-                    align_items: AlignItems::End,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..Style::DEFAULT
-                },
-                ..default()
+            Node {
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::End,
+                align_items: AlignItems::End,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                ..Node::DEFAULT
             },
         ))
         .with_children(|parent| {
-            parent.spawn(TextBundle {
-                text: Text {
-                    sections: vec![TextSection::new(
-                        "Loading...",
-                        TextStyle {
-                            font_size: 16.0,
-                            color: Color::WHITE,
-                            ..default()
-                        },
-                    )],
-                    justify: JustifyText::Center,
-                    ..default()
-                },
-                style: Style {
+            parent.spawn((
+                Node {
                     padding: UiRect::all(Val::Px(16.0)),
                     ..default()
                 },
-                ..default()
-            });
+                Text("Loading...".to_owned()),
+                TextFont {
+                    font_size: 16.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE.into()),
+                TextLayout {
+                    justify: JustifyText::Center,
+                    ..default()
+                },
+            ));
         });
 }
 
@@ -72,20 +66,19 @@ fn init_splash_ui(
     gltf_mesh_assets: Res<Assets<GltfMesh>>,
     game_assets: Res<GameAssets>,
 ) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 2.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(0.0, 2.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
 
     let scene: &Gltf = gltf_assets.get(&game_assets.game_scene).unwrap();
     let gltf_mesh: &GltfMesh = gltf_mesh_assets.get(&scene.meshes[0]).unwrap();
-    commands.spawn(PbrBundle {
-        mesh: gltf_mesh.primitives[0].mesh.clone(),
-        material: server.add(StandardMaterial {
+    commands.spawn((
+        Mesh3d(gltf_mesh.primitives[0].mesh.clone()),
+        MeshMaterial3d(server.add(StandardMaterial {
             base_color: Color::srgb(0.8, 0.6, 0.2),
             ..default()
-        }),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        ..default()
-    });
+        })),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
 }

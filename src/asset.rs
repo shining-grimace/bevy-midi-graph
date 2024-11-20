@@ -1,5 +1,5 @@
 use bevy::{
-    asset::{io::Reader, AssetLoader, AsyncReadExt, LoadContext},
+    asset::{io::Reader, AssetLoader, LoadContext},
     prelude::*,
 };
 use midi_graph::{util::config_from_bytes, Config};
@@ -58,9 +58,9 @@ impl AssetLoader for MidiGraphAssetLoader {
     type Error = MidiGraphAssetLoaderError;
     async fn load<'a>(
         &'a self,
-        reader: &'a mut Reader<'_>,
-        _settings: &'a (),
-        _load_context: &'a mut LoadContext<'_>,
+        reader: &mut dyn Reader,
+        _settings: &(),
+        _load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = vec![];
         reader.read_to_end(&mut bytes).await?;
