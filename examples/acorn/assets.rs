@@ -50,9 +50,8 @@ fn check_game_assets_ready(
 
 fn is_ready(server: &Res<AssetServer>, handle: &UntypedHandle) -> bool {
     match server.load_state(handle.id()) {
-        LoadState::Loading => false,
-        LoadState::Loaded => true,
         LoadState::Failed(error) => panic!("Asset load failed: {:?}", error),
         LoadState::NotLoaded => panic!("Asset not loading"),
+        LoadState::Loaded | LoadState::Loading => server.is_loaded_with_dependencies(handle.id()),
     }
 }
