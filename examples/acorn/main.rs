@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
 mod assets;
-mod splash;
+mod hud;
+mod scenes;
 mod states;
 
 fn main() {
@@ -10,8 +11,9 @@ fn main() {
         .add_plugins((
             DefaultPlugins,
             states::AppStatePlugin,
-            splash::SplashPlugin,
+            hud::HudPlugin,
             assets::GameAssetsPlugin,
+            scenes::ScenesPlugin,
         ))
         .insert_resource(AmbientLight {
             color: Color::WHITE,
