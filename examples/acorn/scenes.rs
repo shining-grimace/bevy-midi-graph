@@ -1,5 +1,8 @@
 use crate::{assets::GameAssets, states::AppState};
-use bevy::{gltf::GltfMesh, prelude::*};
+use bevy::{
+    gltf::{GltfMesh, GltfNode},
+    prelude::*,
+};
 
 pub struct ScenesPlugin;
 
@@ -19,6 +22,7 @@ fn init_splash_scene(
     server: Res<AssetServer>,
     gltf_assets: Res<Assets<Gltf>>,
     gltf_mesh_assets: Res<Assets<GltfMesh>>,
+    gltf_node_assets: Res<Assets<GltfNode>>,
     game_assets: Res<GameAssets>,
 ) {
     commands.spawn((
@@ -27,20 +31,43 @@ fn init_splash_scene(
             order: 0,
             ..default()
         },
-        Transform::from_xyz(0.0, 2.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0.0, 20.0, 30.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
-    let scene: &Gltf = gltf_assets.get(&game_assets.game_scene).unwrap();
-    let gltf_mesh: &GltfMesh = gltf_mesh_assets.get(&scene.meshes[0]).unwrap();
-    commands.spawn((
-        SceneRoot,
-        Mesh3d(gltf_mesh.primitives[0].mesh.clone()),
-        MeshMaterial3d(server.add(StandardMaterial {
-            base_color: Color::srgb(0.8, 0.6, 0.2),
-            ..default()
-        })),
-        Transform::from_xyz(0.0, 0.0, 0.0),
-    ));
+    let extracted_assets = game_assets.extract(&gltf_assets, &gltf_mesh_assets, &gltf_node_assets);
+    let character_material = server.add(StandardMaterial {
+        base_color: Color::srgb(0.8, 0.6, 0.2),
+        ..default()
+    });
+    commands
+        .spawn((
+            SceneRoot,
+            Mesh3d(extracted_assets.terrain),
+            MeshMaterial3d(server.add(StandardMaterial {
+                base_color: Color::srgb(0.2, 0.8, 0.2),
+                ..default()
+            })),
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Mesh3d(extracted_assets.squirrel),
+                MeshMaterial3d(character_material.clone()),
+                extracted_assets.marker_splash_squirrel,
+            ));
+            parent.spawn((
+                Mesh3d(extracted_assets.monkey),
+                MeshMaterial3d(character_material.clone()),
+            ));
+            parent.spawn((
+                Mesh3d(extracted_assets.fan),
+                MeshMaterial3d(character_material.clone()),
+            ));
+            parent.spawn((
+                Mesh3d(extracted_assets.acorn),
+                MeshMaterial3d(character_material.clone()),
+            ));
+        });
 }
 
 fn remove_splash_scene(
@@ -60,6 +87,7 @@ fn init_game_scene(
     server: Res<AssetServer>,
     gltf_assets: Res<Assets<Gltf>>,
     gltf_mesh_assets: Res<Assets<GltfMesh>>,
+    gltf_node_assets: Res<Assets<GltfNode>>,
     game_assets: Res<GameAssets>,
 ) {
     commands.spawn((
@@ -68,18 +96,40 @@ fn init_game_scene(
             order: 0,
             ..default()
         },
-        Transform::from_xyz(0.0, 2.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(5.0, 20.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
-    let scene: &Gltf = gltf_assets.get(&game_assets.game_scene).unwrap();
-    let gltf_mesh: &GltfMesh = gltf_mesh_assets.get(&scene.meshes[0]).unwrap();
-    commands.spawn((
-        SceneRoot,
-        Mesh3d(gltf_mesh.primitives[0].mesh.clone()),
-        MeshMaterial3d(server.add(StandardMaterial {
-            base_color: Color::srgb(0.8, 0.6, 0.2),
-            ..default()
-        })),
-        Transform::from_xyz(0.0, 0.0, 0.0),
-    ));
+    let extracted_assets = game_assets.extract(&gltf_assets, &gltf_mesh_assets, &gltf_node_assets);
+    let character_material = server.add(StandardMaterial {
+        base_color: Color::srgb(0.8, 0.6, 0.2),
+        ..default()
+    });
+    commands
+        .spawn((
+            SceneRoot,
+            Mesh3d(extracted_assets.terrain),
+            MeshMaterial3d(server.add(StandardMaterial {
+                base_color: Color::srgb(0.2, 0.8, 0.2),
+                ..default()
+            })),
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Mesh3d(extracted_assets.squirrel),
+                MeshMaterial3d(character_material.clone()),
+            ));
+            parent.spawn((
+                Mesh3d(extracted_assets.monkey),
+                MeshMaterial3d(character_material.clone()),
+            ));
+            parent.spawn((
+                Mesh3d(extracted_assets.fan),
+                MeshMaterial3d(character_material.clone()),
+            ));
+            parent.spawn((
+                Mesh3d(extracted_assets.acorn),
+                MeshMaterial3d(character_material.clone()),
+            ));
+        });
 }
