@@ -1,4 +1,5 @@
-use crate::{assets::GameAssets, states::AppState};
+use crate::{assets::GameAssets, states::AppState, Squirrel};
+use avian3d::prelude::*;
 use bevy::{
     gltf::{GltfMesh, GltfNode},
     prelude::*,
@@ -88,6 +89,7 @@ fn init_game_scene(
     gltf_assets: Res<Assets<Gltf>>,
     gltf_mesh_assets: Res<Assets<GltfMesh>>,
     gltf_node_assets: Res<Assets<GltfNode>>,
+    mesh_assets: Res<Assets<Mesh>>,
     game_assets: Res<GameAssets>,
 ) {
     commands.spawn((
@@ -104,10 +106,15 @@ fn init_game_scene(
         base_color: Color::srgb(0.8, 0.6, 0.2),
         ..default()
     });
+
+    let terrain_mesh = mesh_assets.get(&extracted_assets.terrain).unwrap();
+
     commands
         .spawn((
             SceneRoot,
-            Mesh3d(extracted_assets.terrain),
+            Mesh3d(extracted_assets.terrain.clone()),
+            Collider::trimesh_from_mesh(terrain_mesh).unwrap(),
+            RigidBody::Static,
             MeshMaterial3d(server.add(StandardMaterial {
                 base_color: Color::srgb(0.2, 0.8, 0.2),
                 ..default()
@@ -116,6 +123,10 @@ fn init_game_scene(
         ))
         .with_children(|parent| {
             parent.spawn((
+                Squirrel,
+                LinearVelocity::ZERO,
+                Collider::cylinder(0.5, 2.0),
+                RigidBody::Dynamic,
                 Mesh3d(extracted_assets.squirrel),
                 MeshMaterial3d(character_material.clone()),
             ));

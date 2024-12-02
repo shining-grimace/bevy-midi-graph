@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { version = "0.15.0-rc.3", features = ["jpeg"] }
+bevy = { version = "0.15.0", features = ["jpeg"] }
 ron = "0.8.1"
 midi-graph = { git = "https://github.com/grimace87/midi-graph.git" }
 
 [dev-dependencies]
-avian3d = { git = "https://github.com/Jondolf/avian.git", rev = "0664f27ca0c7928d67ad459d61b54c1207717e01" }
-bevy = { version = "0.15.0-rc.3", features = ["jpeg"] }
+avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
+bevy = { version = "0.15.0", features = ["jpeg"] }
 

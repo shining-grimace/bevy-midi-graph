@@ -1,7 +1,9 @@
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
 mod assets;
 mod hud;
+mod input;
 mod scenes;
 mod states;
 
@@ -10,8 +12,10 @@ fn main() {
         .insert_resource(ClearColor(Color::srgb(0.2, 0.2, 0.2)))
         .add_plugins((
             DefaultPlugins,
+            PhysicsPlugins::default(),
             states::AppStatePlugin,
             hud::HudPlugin,
+            input::InputPlugin,
             assets::GameAssetsPlugin,
             scenes::ScenesPlugin,
         ))
@@ -19,13 +23,8 @@ fn main() {
             color: Color::WHITE,
             brightness: 1000.0,
         })
-        .add_systems(PreUpdate, input_system)
         .run();
 }
 
-fn input_system(keyboard_input: Res<ButtonInput<KeyCode>>, mut quit_signal: EventWriter<AppExit>) {
-    let quit = keyboard_input.pressed(KeyCode::Escape);
-    if quit {
-        quit_signal.send(AppExit::Success);
-    }
-}
+#[derive(Component)]
+pub struct Squirrel;
