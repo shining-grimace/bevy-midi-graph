@@ -1,20 +1,20 @@
 (
-    midi: MidiData(
+    root: Midi(
         node_id: Some(101),
-        source: FilePath("assets/demo/LoopingMidi.mid")
-    ),
-    channels: {
-        0: Ranges([
-            ( lower: 0, upper: 50, source: Envelope(
-                attack_time: 0.5,
-                decay_time: 1.0,
-                sustain_multiplier: 0.75,
-                release_time: 0.125,
-                source: LfsrNoise( inside_feedback: false )
-            ))
-        ]),
-        1: Ranges([
-            ( lower: 0, upper: 255, source: SawtoothWave( amplitude: 0.125 ))
-        ])
-    }
+        source: FilePath("assets/demo/LoopingMidi.mid"),
+        channels: {
+            0: Ranges([
+                ( lower: 0, upper: 50, source: Envelope(
+                    attack_time: 0.5,
+                    decay_time: 1.0,
+                    sustain_multiplier: 0.75,
+                    release_time: 0.125,
+                        source: LfsrNoise( inside_feedback: false )
+                ))
+            ]),
+            1: Ranges([
+                ( lower: 0, upper: 255, source: SawtoothWave( amplitude: 0.125 ))
+            ])
+        }
+    )
 )

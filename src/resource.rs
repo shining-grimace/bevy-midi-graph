@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy::utils::synccell::SyncCell;
 use midi_graph::{
-    AsyncEventReceiver, BaseMixer, Config, Error, EventChannel, LfsrNoiseSource, MidiSource,
+    util::source_from_config, AsyncEventReceiver, BaseMixer, Config, Error, EventChannel,
+    LfsrNoiseSource,
 };
 use std::sync::Mutex;
 
@@ -38,8 +39,8 @@ impl MidiGraphAudioContext {
             }
             Ok(mixer) => mixer,
         };
-        let source = MidiSource::from_config(config)?;
-        let (channel, source) = AsyncEventReceiver::new(None, Box::new(source));
+        let source = source_from_config(&config.root)?;
+        let (channel, source) = AsyncEventReceiver::new(None, source);
         mixer.0.swap_consumer(Box::new(source));
         self.event_channel = SyncCell::new(channel);
         Ok(())
