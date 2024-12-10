@@ -6,6 +6,8 @@ use midi_graph::{
 };
 use std::sync::Mutex;
 
+const NODE_ID_ROOT_EVENTS: u64 = 0x10000000f;
+
 pub struct SendMixer(BaseMixer);
 
 unsafe impl Send for SendMixer {}
@@ -13,17 +15,17 @@ unsafe impl Send for SendMixer {}
 #[derive(Resource)]
 pub struct MidiGraphAudioContext {
     mixer: Mutex<SendMixer>,
-    pub event_channel: SyncCell<EventChannel>,
+    event_channels: SyncCell<Vec<EventChannel>>,
 }
 
 impl Default for MidiGraphAudioContext {
     fn default() -> Self {
         let source = LfsrNoiseSource::new(None, 0.25, false, 69);
-        let (channel, source) = AsyncEventReceiver::new(None, Box::new(source));
+        let (_, source) = AsyncEventReceiver::new(None, Box::new(source));
         let mixer = BaseMixer::start_with(Box::from(source)).unwrap();
         Self {
             mixer: Mutex::new(SendMixer(mixer)),
-            event_channel: SyncCell::new(channel),
+            event_channels: SyncCell::new(vec![]),
         }
     }
 }
@@ -39,10 +41,22 @@ impl MidiGraphAudioContext {
             }
             Ok(mixer) => mixer,
         };
-        let source = source_from_config(&config.root)?;
-        let (channel, source) = AsyncEventReceiver::new(None, source);
+        let (mut channels, source) = source_from_config(&config.root)?;
+        let (channel, source) = AsyncEventReceiver::new(Some(NODE_ID_ROOT_EVENTS), source);
+        channels.push(channel);
         mixer.0.swap_consumer(Box::new(source));
-        self.event_channel = SyncCell::new(channel);
+        self.event_channels = SyncCell::new(channels);
         Ok(())
+    }
+
+    pub fn root_event_channel(&mut self) -> Option<&mut EventChannel> {
+        self.event_channel(NODE_ID_ROOT_EVENTS)
+    }
+
+    pub fn event_channel(&mut self, for_node_id: u64) -> Option<&mut EventChannel> {
+        let channels = self.event_channels.get();
+        channels
+            .iter_mut()
+            .find(|channel| channel.for_node_id == for_node_id)
     }
 }

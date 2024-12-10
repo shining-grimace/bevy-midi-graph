@@ -167,7 +167,9 @@ fn check_intersections(
         *current_anchor = desired_track;
         let graph_id = graph.0.id();
         if let Some(graph) = graphs.get_mut(graph_id) {
-            let channel: &mut EventChannel = audio_context.event_channel.get();
+            let channel: &mut EventChannel = audio_context
+                .root_event_channel()
+                .expect("No root event receiver on audio context");
             let send = channel.try_send(NodeEvent::NodeControl {
                 node_id: MIDI_NODE_ID,
                 event: NodeControlEvent::SeekWhenIdeal {
