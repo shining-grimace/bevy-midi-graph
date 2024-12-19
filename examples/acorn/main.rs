@@ -4,6 +4,7 @@ use bevy::prelude::*;
 mod assets;
 mod hud;
 mod input;
+mod material;
 mod scenes;
 mod states;
 
@@ -11,8 +12,8 @@ fn main() {
     App::new()
         .insert_resource(ClearColor(Color::srgb(0.2, 0.2, 0.2)))
         .add_plugins((
-            DefaultPlugins,
             PhysicsPlugins::default(),
+            material::AcornMaterialPlugin, // Includes DefaultPlugins
             states::AppStatePlugin,
             hud::HudPlugin,
             input::InputPlugin,

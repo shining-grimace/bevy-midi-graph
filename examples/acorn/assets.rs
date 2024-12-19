@@ -1,7 +1,9 @@
-use crate::states::AppState;
+use crate::{material::ArrayTextureMaterialExtension, states::AppState};
 use bevy::{
     asset::LoadState,
     gltf::{GltfMesh, GltfNode},
+    image::{ImageAddressMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor},
+    pbr::ExtendedMaterial,
     prelude::*,
 };
 
@@ -29,14 +31,17 @@ pub struct ExtractedMeshes {
 
 #[derive(Resource, Default)]
 pub struct GameAssets {
-    pub texture: Handle<Image>,
+    pub texture_0: Handle<Image>,
+    pub texture_1: Handle<Image>,
     pub game_scene: Handle<Gltf>,
+    pub array_material: Handle<ExtendedMaterial<StandardMaterial, ArrayTextureMaterialExtension>>,
 }
 
 impl GameAssets {
-    fn get_all_untyped(&self) -> [UntypedHandle; 2] {
+    fn get_all_file_assets_untyped(&self) -> [UntypedHandle; 3] {
         [
-            self.texture.clone_weak().untyped(),
+            self.texture_0.clone_weak().untyped(),
+            self.texture_1.clone_weak().untyped(),
             self.game_scene.clone_weak().untyped(),
         ]
     }
@@ -87,29 +92,70 @@ impl GameAssets {
     }
 }
 
-fn init_game_assets(server: Res<AssetServer>, mut assets: ResMut<GameAssets>) {
-    assets.texture = server.load::<Image>("acorn/terrain.jpg");
+fn init_game_assets(
+    server: Res<AssetServer>,
+    mut assets: ResMut<GameAssets>,
+    mut materials: ResMut<
+        Assets<ExtendedMaterial<StandardMaterial, ArrayTextureMaterialExtension>>,
+    >,
+) {
+    assets.texture_0 = server.load_with_settings("acorn/terrain.jpg", |s: &mut _| {
+        *s = ImageLoaderSettings {
+            sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
+                address_mode_u: ImageAddressMode::Repeat,
+                address_mode_v: ImageAddressMode::Repeat,
+                ..default()
+            }),
+            ..default()
+        }
+    });
+    assets.texture_1 = server.load_with_settings("acorn/terrain-ext.jpg", |s: &mut _| {
+        *s = ImageLoaderSettings {
+            sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
+                address_mode_u: ImageAddressMode::Repeat,
+                address_mode_v: ImageAddressMode::Repeat,
+                ..default()
+            }),
+            ..default()
+        }
+    });
     assets.game_scene = server.load::<Gltf>("acorn/game.glb");
+    assets.array_material = materials.add(ExtendedMaterial {
+        base: StandardMaterial::default(),
+        extension: ArrayTextureMaterialExtension {
+            array_texture_0: assets.texture_0.clone(),
+            array_texture_1: assets.texture_1.clone(),
+        },
+    })
 }
 
 fn check_game_assets_ready(
     server: Res<AssetServer>,
     assets: Res<GameAssets>,
+    mut images: ResMut<Assets<Image>>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
-    let handles = assets.get_all_untyped();
-    for handle in handles {
-        if !is_ready(&server, &handle) {
+    let handles = assets.get_all_file_assets_untyped();
+    for (index, handle) in handles.iter().enumerate() {
+        if !is_ready(&server, &handle, index) {
             return;
         }
     }
+
+    // This bit taken from Bevy array-texture example
+    let array_layers = 4;
+    let image = images.get_mut(&assets.texture_0).unwrap();
+    image.reinterpret_stacked_2d_as_array(array_layers);
+    let image = images.get_mut(&assets.texture_1).unwrap();
+    image.reinterpret_stacked_2d_as_array(array_layers);
+
     next_state.set(AppState::Splash);
 }
 
-fn is_ready(server: &Res<AssetServer>, handle: &UntypedHandle) -> bool {
+fn is_ready(server: &Res<AssetServer>, handle: &UntypedHandle, index: usize) -> bool {
     match server.load_state(handle.id()) {
-        LoadState::Failed(error) => panic!("Asset load failed: {:?}", error),
-        LoadState::NotLoaded => panic!("Asset not loading"),
+        LoadState::Failed(error) => panic!("Asset load failed at index {}: {:?}", index, error),
+        LoadState::NotLoaded => panic!("Asset not loading at index {}", index),
         LoadState::Loaded | LoadState::Loading => server.is_loaded_with_dependencies(handle.id()),
     }
 }

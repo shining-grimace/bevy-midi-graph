@@ -44,10 +44,7 @@ fn init_splash_scene(
         .spawn((
             SceneRoot,
             Mesh3d(extracted_assets.terrain),
-            MeshMaterial3d(server.add(StandardMaterial {
-                base_color: Color::srgb(0.2, 0.8, 0.2),
-                ..default()
-            })),
+            MeshMaterial3d(game_assets.array_material.clone()),
             Transform::from_xyz(0.0, 0.0, 0.0),
         ))
         .with_children(|parent| {
@@ -98,7 +95,7 @@ fn init_game_scene(
             order: 0,
             ..default()
         },
-        Transform::from_xyz(5.0, 20.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0.0, 24.0, 16.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
     let extracted_assets = game_assets.extract(&gltf_assets, &gltf_mesh_assets, &gltf_node_assets);
@@ -115,10 +112,7 @@ fn init_game_scene(
             Mesh3d(extracted_assets.terrain.clone()),
             Collider::trimesh_from_mesh(terrain_mesh).unwrap(),
             RigidBody::Static,
-            MeshMaterial3d(server.add(StandardMaterial {
-                base_color: Color::srgb(0.2, 0.8, 0.2),
-                ..default()
-            })),
+            MeshMaterial3d(game_assets.array_material.clone()),
             Transform::from_xyz(0.0, 0.0, 0.0),
         ))
         .with_children(|parent| {
