@@ -290,12 +290,15 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "avian3d"
-version = "0.1.2"
-source = "git+https://github.com/Jondolf/avian.git?branch=main#52cbcecce0fd05a65005ab6935ebeb231373c2c6"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b563e53203ce50ce39c221a7e0b1f73b8fc2b4aa65439b436700c4ee1e85547a"
 dependencies = [
  "avian_derive",
  "bevy",
+ "bevy_heavy",
  "bevy_math",
+ "bevy_transform_interpolation",
  "bitflags 2.6.0",
  "derive_more",
  "fxhash",
@@ -308,8 +311,9 @@ dependencies = [
 
 [[package]]
 name = "avian_derive"
-version = "0.1.0"
-source = "git+https://github.com/Jondolf/avian.git?branch=main#52cbcecce0fd05a65005ab6935ebeb231373c2c6"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf96a7b75cf061f223b6e1ed3dd4d3a063b2c3c0acfb8994d6ab31e29a2bcea5"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -689,6 +693,16 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
+]
+
+[[package]]
+name = "bevy_heavy"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f85619a206875db57b0213dc5242b51f1be748663cd5f8f99f78d2a6a108dabf"
+dependencies = [
+ "bevy_math",
+ "bevy_reflect",
 ]
 
 [[package]]
@@ -1160,6 +1174,15 @@ dependencies = [
  "bevy_math",
  "bevy_reflect",
  "derive_more",
+]
+
+[[package]]
+name = "bevy_transform_interpolation"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fcad6974fb74cab07425c4f3d3af78876966b4525c3aec5c0d56ae8511a946a"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
@@ -2555,7 +2578,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -4605,7 +4628,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
