@@ -91,7 +91,13 @@ fn check_graph_ready(
         LoadState::Loaded => {
             *graph_did_start = true;
             let asset = assets.get(&loading.0).unwrap();
-            mixer.swap_graph(&asset.config).unwrap();
+            let program_existed = mixer.store_new_program(&asset.config).unwrap();
+            if program_existed {
+                panic!("Unexpectedly stored a program in an existing slot");
+            }
+            mixer
+                .change_program(asset.config.program_no.unwrap())
+                .unwrap();
         }
         _ => {}
     }
@@ -148,7 +154,6 @@ fn check_intersections(
     let player_entity = player_query.get_single().unwrap();
     let sensor_entity = sensor_query.get_single().unwrap();
     let started = collision_started_events.read().any(|event| {
-        println!("Started: {}, {}", player_entity, sensor_entity);
         (event.0 == player_entity && event.1 == sensor_entity)
             || (event.0 == sensor_entity && event.1 == player_entity)
     });
