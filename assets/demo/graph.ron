@@ -1,5 +1,4 @@
 (
-    program_no: Some(1),
     root: Midi(
         node_id: Some(101),
         source: FilePath("assets/demo/LoopingMidi.mid"),

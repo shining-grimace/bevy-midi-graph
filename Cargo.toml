@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.15.0", features = ["jpeg"] }
 ron = "0.8.1"
-midi-graph = { git = "https://github.com/grimace87/midi-graph.git" }
+midi-graph = { git = "https://github.com/grimace87/midi-graph.git", rev = "89b3018e53de60d17e980bfda8180a9071a24b39" }
 
 [dev-dependencies]
 avian3d = "0.2.0"

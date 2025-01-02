@@ -5,6 +5,7 @@ use midi_graph::{EventChannel, NodeControlEvent, NodeEvent};
 
 const PLAYER_VELOCITY: f32 = 3.0;
 
+const PROGRAM_NO: usize = 1;
 const MIDI_NODE_ID: u64 = 101;
 const DEFAULT_ANCHOR: u32 = 0;
 const ENTER_TENSION_ANCHOR: u32 = 1;
@@ -91,13 +92,11 @@ fn check_graph_ready(
         LoadState::Loaded => {
             *graph_did_start = true;
             let asset = assets.get(&loading.0).unwrap();
-            let program_existed = mixer.store_new_program(&asset.config).unwrap();
+            let program_existed = mixer.store_new_program(PROGRAM_NO, &asset.config).unwrap();
             if program_existed {
                 panic!("Unexpectedly stored a program in an existing slot");
             }
-            mixer
-                .change_program(asset.config.program_no.unwrap())
-                .unwrap();
+            mixer.change_program(PROGRAM_NO).unwrap();
         }
         _ => {}
     }
@@ -174,6 +173,7 @@ fn check_intersections(
         if let Some(graph) = graphs.get_mut(graph_id) {
             let channel: &mut EventChannel = audio_context
                 .root_event_channel()
+                .unwrap()
                 .expect("No root event receiver on audio context");
             let send = channel.try_send(NodeEvent::NodeControl {
                 node_id: MIDI_NODE_ID,
