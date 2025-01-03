@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::utils::synccell::SyncCell;
 use midi_graph::{util::source_from_config, BaseMixer, Config, Error, EventChannel, SoundSource};
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 const NODE_ID_ROOT_EVENTS: u64 = 0x10000000f;
@@ -12,7 +13,7 @@ unsafe impl Send for SendMixer {}
 #[derive(Resource)]
 pub struct MidiGraphAudioContext {
     mixer: Mutex<SendMixer>,
-    event_channels: SyncCell<Vec<(usize, EventChannel)>>,
+    program_event_channels: SyncCell<HashMap<usize, Vec<EventChannel>>>,
 }
 
 impl Default for MidiGraphAudioContext {
@@ -20,7 +21,7 @@ impl Default for MidiGraphAudioContext {
         let mixer = BaseMixer::start_empty().unwrap();
         Self {
             mixer: Mutex::new(SendMixer(mixer)),
-            event_channels: SyncCell::new(vec![]),
+            program_event_channels: SyncCell::new(HashMap::new()),
         }
     }
 }
@@ -41,11 +42,8 @@ impl MidiGraphAudioContext {
         let wrapped_config = Self::wrap_in_root_node(config);
         let (channels, source) = source_from_config(&wrapped_config.root)?;
         let replaced_existing = mixer.0.store_program(program_no, source);
-        let channels = channels
-            .into_iter()
-            .map(|channel| (program_no, channel))
-            .collect();
-        self.event_channels = SyncCell::new(channels);
+        let existing_channels = self.program_event_channels.get();
+        let _ = existing_channels.insert(program_no, channels);
         Ok(replaced_existing)
     }
 
@@ -80,13 +78,16 @@ impl MidiGraphAudioContext {
         let Some(program_no) = mixer.0.get_current_program_no() else {
             return Ok(None);
         };
-        let channels = self.event_channels.get();
-        let channels = channels
+        let channels = self.program_event_channels.get();
+        let program_channels = match channels.get_mut(&program_no) {
+            Some(channels) => channels,
+            None => {
+                return Ok(None);
+            }
+        };
+        let channels = program_channels
             .iter_mut()
-            .find(|program_channels| {
-                program_channels.0 == program_no && program_channels.1.for_node_id == for_node_id
-            })
-            .map(|(_, channels)| channels);
+            .find(|channel| channel.for_node_id == for_node_id);
         Ok(channels)
     }
 
