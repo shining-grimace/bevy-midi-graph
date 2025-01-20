@@ -350,6 +350,7 @@ dependencies = [
  "bevy",
  "midi-graph",
  "ron",
+ "serde",
 ]
 
 [[package]]
@@ -2579,7 +2580,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -2707,7 +2708,7 @@ dependencies = [
 [[package]]
 name = "midi-graph"
 version = "0.1.0"
-source = "git+https://github.com/grimace87/midi-graph.git?rev=89b3018e53de60d17e980bfda8180a9071a24b39#89b3018e53de60d17e980bfda8180a9071a24b39"
+source = "git+https://github.com/grimace87/midi-graph.git?rev=47646dae90255d7000f108a05195f2ad510b1e6a#47646dae90255d7000f108a05195f2ad510b1e6a"
 dependencies = [
  "byteorder",
  "cpal",
@@ -4620,7 +4621,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

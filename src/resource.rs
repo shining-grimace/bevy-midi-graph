@@ -1,6 +1,7 @@
+use crate::GraphAssetLoader;
 use bevy::prelude::*;
 use bevy::utils::synccell::SyncCell;
-use midi_graph::{util::source_from_config, BaseMixer, Config, Error, EventChannel, SoundSource};
+use midi_graph::{BaseMixer, Config, Error, EventChannel, GraphLoader, SoundSource};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -29,7 +30,12 @@ impl Default for MidiGraphAudioContext {
 impl MidiGraphAudioContext {
     // Store a new program ready to be played later when requested.
     // Returns whether a program was already stored at the given program number.
-    pub fn store_new_program(&mut self, program_no: usize, config: &Config) -> Result<bool, Error> {
+    pub fn store_new_program(
+        &mut self,
+        program_no: usize,
+        config: &Config,
+        loader: &GraphAssetLoader,
+    ) -> Result<bool, Error> {
         let mut mixer = match self.mixer.lock() {
             Err(err) => {
                 return Err(Error::User(format!(
@@ -40,7 +46,7 @@ impl MidiGraphAudioContext {
             Ok(mixer) => mixer,
         };
         let wrapped_config = Self::wrap_in_root_node(config);
-        let (channels, source) = source_from_config(&wrapped_config.root)?;
+        let (channels, source) = loader.load_source_recursive(&wrapped_config.root)?;
         let replaced_existing = mixer.0.store_program(program_no, source);
         let existing_channels = self.program_event_channels.get();
         let _ = existing_channels.insert(program_no, channels);

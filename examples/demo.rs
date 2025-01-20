@@ -1,10 +1,14 @@
 use avian3d::prelude::*;
-use bevy::{asset::LoadState, prelude::*};
-use bevy_midi_graph::{MidiGraphAsset, MidiGraphAudioContext, MidiGraphPlugin};
+use bevy::prelude::*;
+use bevy_midi_graph::{
+    GraphAssetLoader, LoopFileSource, MidiFileSource, MidiGraph, MidiGraphAudioContext,
+    MidiGraphPlugin, OneShotFileSource, Sf2FileSource,
+};
 use midi_graph::{EventChannel, NodeControlEvent, NodeEvent};
 
 const PLAYER_VELOCITY: f32 = 3.0;
 
+const MIDI_CONFIG: &str = "demo/graph.ron";
 const PROGRAM_NO: usize = 1;
 const MIDI_NODE_ID: u64 = 101;
 const DEFAULT_ANCHOR: u32 = 0;
@@ -13,29 +17,36 @@ const ENTER_TENSION_ANCHOR: u32 = 1;
 #[derive(Component)]
 struct Player;
 
-#[derive(Resource, Default)]
-struct GraphAssetLoading(Handle<MidiGraphAsset>);
+#[derive(Resource)]
+struct GraphAssetLoading {
+    pub asset_handle: Handle<MidiGraph>,
+}
 
 pub fn main() {
     App::new()
-        .insert_resource(GraphAssetLoading::default())
         .add_plugins((DefaultPlugins, PhysicsPlugins::default(), MidiGraphPlugin))
         .insert_resource(AmbientLight {
             color: Color::WHITE,
             brightness: 1000.0,
         })
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (initialise_assets, set_up_ui).chain())
         .add_systems(Update, (move_character, check_graph_ready))
         .add_systems(PostUpdate, check_intersections)
         .run();
 }
 
-fn setup(
+fn initialise_assets(world: &mut World) {
+    let asset_server = world.resource::<AssetServer>();
+    let resource = GraphAssetLoading {
+        asset_handle: asset_server.load(MIDI_CONFIG),
+    };
+    world.insert_resource(resource);
+}
+
+fn set_up_ui(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut graph_asset: ResMut<GraphAssetLoading>,
-    asset_server: Res<AssetServer>,
 ) {
     commands.spawn((
         Camera3d::default(),
@@ -73,33 +84,42 @@ fn setup(
         })),
         Transform::from_xyz(-5.0, 3.0, -2.0),
     ));
-    graph_asset.0 = asset_server.load("demo/graph.ron");
 }
 
 fn check_graph_ready(
     server: Res<AssetServer>,
-    loading: Res<GraphAssetLoading>,
-    assets: Res<Assets<MidiGraphAsset>>,
-    mut mixer: ResMut<MidiGraphAudioContext>,
+    mut audio_context: ResMut<MidiGraphAudioContext>,
+    asset_metadata: ResMut<GraphAssetLoading>,
+    asset_server: Res<AssetServer>,
+    graphs: ResMut<Assets<MidiGraph>>,
+    midi_assets: Res<Assets<MidiFileSource>>,
+    sf2_assets: Res<Assets<Sf2FileSource>>,
+    loop_assets: Res<Assets<LoopFileSource>>,
+    one_shot_assets: Res<Assets<OneShotFileSource>>,
     mut graph_did_start: Local<bool>,
 ) {
     if *graph_did_start {
         return;
     }
-    let load_state = server.get_load_state(loading.0.id()).unwrap();
-    match load_state {
-        LoadState::Failed(e) => panic!("{}", e),
-        LoadState::Loaded => {
-            *graph_did_start = true;
-            let asset = assets.get(&loading.0).unwrap();
-            let program_existed = mixer.store_new_program(PROGRAM_NO, &asset.config).unwrap();
-            if program_existed {
-                panic!("Unexpectedly stored a program in an existing slot");
-            }
-            mixer.change_program(PROGRAM_NO).unwrap();
-        }
-        _ => {}
+    if !server.is_loaded_with_dependencies(asset_metadata.asset_handle.id()) {
+        return;
     }
+    let loader = GraphAssetLoader::new(
+        &asset_server,
+        &midi_assets,
+        &sf2_assets,
+        &loop_assets,
+        &one_shot_assets,
+    );
+    *graph_did_start = true;
+    let asset = graphs.get(&asset_metadata.asset_handle).unwrap();
+    let program_existed = audio_context
+        .store_new_program(PROGRAM_NO, &asset.config, &loader)
+        .unwrap();
+    if program_existed {
+        panic!("Unexpectedly stored a program in an existing slot");
+    }
+    audio_context.change_program(PROGRAM_NO).unwrap();
 }
 
 fn move_character(
@@ -141,13 +161,13 @@ fn move_character(
 }
 
 fn check_intersections(
-    graph: Res<GraphAssetLoading>,
+    asset_metadata: Res<GraphAssetLoading>,
     mut audio_context: ResMut<MidiGraphAudioContext>,
     player_query: Query<Entity, With<Player>>,
     sensor_query: Query<Entity, With<Sensor>>,
     mut collision_started_events: EventReader<CollisionStarted>,
     mut collision_ended_events: EventReader<CollisionEnded>,
-    mut graphs: ResMut<Assets<MidiGraphAsset>>,
+    mut graphs: ResMut<Assets<MidiGraph>>,
     mut current_anchor: Local<u32>,
 ) {
     let player_entity = player_query.get_single().unwrap();
@@ -169,7 +189,7 @@ fn check_intersections(
     };
     if *current_anchor != desired_track {
         *current_anchor = desired_track;
-        let graph_id = graph.0.id();
+        let graph_id = asset_metadata.asset_handle.id();
         if let Some(graph) = graphs.get_mut(graph_id) {
             let channel: &mut EventChannel = audio_context
                 .root_event_channel()

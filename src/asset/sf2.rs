@@ -2,41 +2,40 @@ use bevy::{
     asset::{io::Reader, AssetLoader, LoadContext},
     prelude::*,
 };
-use midi_graph::{util::config_from_bytes, Config};
 
 #[derive(Asset, TypePath)]
-pub struct MidiGraphAsset {
-    pub config: Config,
+pub struct Sf2FileSource {
+    pub bytes: Vec<u8>,
 }
 
 // TODO: Can this be replaced by midi_graph::Error?
 #[derive(Debug)]
-pub enum MidiGraphAssetLoaderError {
+pub enum Sf2FileSourceLoaderError {
     Io(std::io::Error),
     Ron(ron::error::SpannedError),
     MidiGraph(midi_graph::Error),
     Unknown(String),
 }
 
-impl From<std::io::Error> for MidiGraphAssetLoaderError {
+impl From<std::io::Error> for Sf2FileSourceLoaderError {
     fn from(value: std::io::Error) -> Self {
         Self::Io(value)
     }
 }
 
-impl From<ron::error::SpannedError> for MidiGraphAssetLoaderError {
+impl From<ron::error::SpannedError> for Sf2FileSourceLoaderError {
     fn from(value: ron::error::SpannedError) -> Self {
         Self::Ron(value)
     }
 }
 
-impl From<midi_graph::Error> for MidiGraphAssetLoaderError {
+impl From<midi_graph::Error> for Sf2FileSourceLoaderError {
     fn from(value: midi_graph::Error) -> Self {
         Self::MidiGraph(value)
     }
 }
 
-impl std::fmt::Display for MidiGraphAssetLoaderError {
+impl std::fmt::Display for Sf2FileSourceLoaderError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Io(e) => e.fmt(fmt),
@@ -47,15 +46,15 @@ impl std::fmt::Display for MidiGraphAssetLoaderError {
     }
 }
 
-impl std::error::Error for MidiGraphAssetLoaderError {}
+impl std::error::Error for Sf2FileSourceLoaderError {}
 
 #[derive(Default)]
-pub struct MidiGraphAssetLoader {}
+pub struct Sf2FileSourceLoader {}
 
-impl AssetLoader for MidiGraphAssetLoader {
-    type Asset = MidiGraphAsset;
+impl AssetLoader for Sf2FileSourceLoader {
+    type Asset = Sf2FileSource;
     type Settings = ();
-    type Error = MidiGraphAssetLoaderError;
+    type Error = Sf2FileSourceLoaderError;
     async fn load<'a>(
         &'a self,
         reader: &mut dyn Reader,
@@ -64,15 +63,10 @@ impl AssetLoader for MidiGraphAssetLoader {
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = vec![];
         reader.read_to_end(&mut bytes).await?;
-        let config = match config_from_bytes(&bytes) {
-            Ok(config) => config,
-            Err(midi_graph::Error::Ron(error)) => {
-                return Err(Self::Error::Ron(error));
-            }
-            Err(_) => {
-                return Err(Self::Error::Unknown("Unknown error".to_owned()));
-            }
-        };
-        Ok(MidiGraphAsset { config })
+        Ok(Sf2FileSource { bytes })
+    }
+
+    fn extensions(&self) -> &[&str] {
+        &["sf2"]
     }
 }
