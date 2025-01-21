@@ -4,12 +4,13 @@ mod resource;
 use bevy::prelude::*;
 
 pub use asset::{
-    audio_loop::{LoopFileSource, LoopFileSourceLoader, LoopFileSourceLoaderError},
-    graph::{MidiGraph, MidiGraphLoader, MidiGraphLoaderError},
+    audio_loop::{LoopFileSource, LoopFileSourceLoader},
+    graph::{MidiGraph, MidiGraphLoader},
     loader::GraphAssetLoader,
-    midi::{MidiFileSource, MidiFileSourceLoader, MidiFileSourceLoaderError},
-    one_shot::{OneShotFileSource, OneShotFileSourceLoader, OneShotFileSourceLoaderError},
-    sf2::{Sf2FileSource, Sf2FileSourceLoader, Sf2FileSourceLoaderError},
+    midi::{MidiFileSource, MidiFileSourceLoader},
+    one_shot::{OneShotFileSource, OneShotFileSourceLoader},
+    sf2::{Sf2FileSource, Sf2FileSourceLoader},
+    AssetError,
 };
 pub use resource::MidiGraphAudioContext;
 
