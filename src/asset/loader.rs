@@ -36,7 +36,13 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
     fn load_source_recursive(
         &self,
         source: &SoundSource,
-    ) -> Result<(Vec<EventChannel>, Box<dyn Node + Send + 'static>), Error> {
+    ) -> Result<
+        (
+            Vec<EventChannel>,
+            Box<dyn Node + Send + 'static>,
+        ),
+        Error,
+    > {
         let (event_channels, consumer) = match source {
             SoundSource::Midi {
                 node_id,
@@ -80,7 +86,8 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                         all_channels.extend(channels);
                         font_builder = font_builder.add_range(note_range, source)?;
                     }
-                    let source: Box<dyn Node + Send + 'static> = Box::new(font_builder.build());
+                    let source: Box<dyn Node + Send + 'static> =
+                        Box::new(font_builder.build());
                     (all_channels, source)
                 }
                 FontSource::Sf2FilePath {
