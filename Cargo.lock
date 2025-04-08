@@ -2708,7 +2708,7 @@ dependencies = [
 [[package]]
 name = "midi-graph"
 version = "0.1.0"
-source = "git+https://github.com/grimace87/midi-graph.git?rev=a924be4fcdd2261b54ecddbf622d1e8f953aa009#a924be4fcdd2261b54ecddbf622d1e8f953aa009"
+source = "git+https://github.com/grimace87/midi-graph.git?rev=2b90c0a8e10e7d14a79fb7c3742b45f78637b0fe#2b90c0a8e10e7d14a79fb7c3742b45f78637b0fe"
 dependencies = [
  "byteorder",
  "cpal",

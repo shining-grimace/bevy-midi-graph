@@ -1,10 +1,9 @@
 use crate::{LoopFileSource, MidiFileSource, OneShotFileSource, Sf2FileSource};
 use bevy::prelude::*;
 use midi_graph::{
-    util, AsyncEventReceiver, BufferConsumerNode, CombinerSource, Envelope, Error, EventChannel,
-    Fader, FontSource, GraphLoader, LfsrNoiseSource, LoopRange, MidiDataSource, MixerSource,
-    NoteRange, SawtoothWaveSource, SoundFontBuilder, SoundSource, SquareWaveSource,
-    TriangleWaveSource,
+    util, AsyncEventReceiver, CombinerSource, Envelope, Error, EventChannel, Fader, FontSource,
+    GraphLoader, LfsrNoiseSource, LoopRange, MidiDataSource, MixerSource, Node, NoteRange,
+    SawtoothWaveSource, SoundFontBuilder, SoundSource, SquareWaveSource, TriangleWaveSource,
 };
 
 pub struct GraphAssetLoader<'a> {
@@ -37,13 +36,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
     fn load_source_recursive(
         &self,
         source: &SoundSource,
-    ) -> Result<
-        (
-            Vec<EventChannel>,
-            Box<dyn BufferConsumerNode + Send + 'static>,
-        ),
-        Error,
-    > {
+    ) -> Result<(Vec<EventChannel>, Box<dyn Node + Send + 'static>), Error> {
         let (event_channels, consumer) = match source {
             SoundSource::Midi {
                 node_id,
@@ -67,14 +60,14 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                     midi_builder = midi_builder.add_channel_source(*channel, font);
                 }
                 let source = midi_builder.build()?;
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (event_channels, source)
             }
             SoundSource::EventReceiver { node_id, source } => {
                 let (mut channels, source) = self.load_source_recursive(source)?;
                 let (channel, source) = AsyncEventReceiver::new(*node_id, source);
                 channels.push(channel);
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (channels, source)
             }
             SoundSource::Font { node_id, config } => match config {
@@ -87,8 +80,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                         all_channels.extend(channels);
                         font_builder = font_builder.add_range(note_range, source)?;
                     }
-                    let source: Box<dyn BufferConsumerNode + Send + 'static> =
-                        Box::new(font_builder.build());
+                    let source: Box<dyn Node + Send + 'static> = Box::new(font_builder.build());
                     (all_channels, source)
                 }
                 FontSource::Sf2FilePath {
@@ -104,7 +96,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                         asset.bytes.as_slice(),
                         *instrument_index,
                     )?;
-                    let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                    let source: Box<dyn Node + Send + 'static> = Box::new(source);
                     (vec![], source)
                 }
             },
@@ -114,17 +106,17 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                 duty_cycle,
             } => {
                 let source = SquareWaveSource::new(*node_id, *amplitude, *duty_cycle);
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (vec![], source)
             }
             SoundSource::TriangleWave { node_id, amplitude } => {
                 let source = TriangleWaveSource::new(*node_id, *amplitude);
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (vec![], source)
             }
             SoundSource::SawtoothWave { node_id, amplitude } => {
                 let source = SawtoothWaveSource::new(*node_id, *amplitude);
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (vec![], source)
             }
             SoundSource::LfsrNoise {
@@ -139,7 +131,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                     *inside_feedback,
                     *note_for_16_shifts,
                 );
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (vec![], source)
             }
             SoundSource::SampleFilePath {
@@ -156,7 +148,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                 let loop_range = looping.as_ref().map(LoopRange::from_config);
                 let source =
                     util::wav_from_bytes(asset.bytes.as_slice(), *base_note, loop_range, *node_id)?;
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (vec![], source)
             }
             SoundSource::OneShotFilePath { node_id, path } => {
@@ -166,7 +158,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                     .get(handle.id())
                     .ok_or_else(|| Error::User(format!("One shot file not loaded: {}", path)))?;
                 let source = util::one_shot_from_bytes(asset.bytes.as_slice(), *node_id)?;
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (vec![], source)
             }
             SoundSource::Envelope {
@@ -186,19 +178,19 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                     *release_time,
                     source,
                 );
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (channels, source)
             }
             SoundSource::Combiner { node_id, sources } => {
                 let mut event_channels: Vec<EventChannel> = vec![];
-                let mut inner_sources: Vec<Box<dyn BufferConsumerNode + Send + 'static>> = vec![];
+                let mut inner_sources: Vec<Box<dyn Node + Send + 'static>> = vec![];
                 for source in sources.iter() {
                     let (channels, source) = self.load_source_recursive(source)?;
                     event_channels.extend(channels);
                     inner_sources.push(source);
                 }
                 let source = CombinerSource::new(*node_id, inner_sources);
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (event_channels, source)
             }
             SoundSource::Mixer {
@@ -211,7 +203,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                 let (more_channels, source_1) = self.load_source_recursive(source_1)?;
                 let source = MixerSource::new(*node_id, *balance, source_0, source_1);
                 channels.extend(more_channels);
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (channels, source)
             }
             SoundSource::Fader {
@@ -221,7 +213,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
             } => {
                 let (channels, source) = self.load_source_recursive(source)?;
                 let source = Fader::new(*node_id, *initial_volume, source);
-                let source: Box<dyn BufferConsumerNode + Send + 'static> = Box::new(source);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (channels, source)
             }
         };
