@@ -19,7 +19,10 @@ pub mod config {
 }
 
 pub mod midi {
-    pub use midi_graph::{EventChannel, NodeControlEvent, NodeEvent, NoteEvent};
+    pub use midi_graph::{
+        effect::EventChannel, effect::ModulationProperty, midi::CueData, Balance, Event,
+        EventTarget, Message,
+    };
 }
 
 pub struct MidiGraphPlugin;

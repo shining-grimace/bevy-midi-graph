@@ -1,9 +1,11 @@
 use crate::{LoopFileSource, MidiFileSource, OneShotFileSource, Sf2FileSource};
 use bevy::prelude::*;
 use midi_graph::{
-    util, AsyncEventReceiver, CombinerSource, Envelope, Error, EventChannel, Fader, FontSource,
-    GraphLoader, LfsrNoiseSource, LoopRange, MidiDataSource, MixerSource, Node, NoteRange,
-    SawtoothWaveSource, SoundFontBuilder, SoundSource, SquareWaveSource, TriangleWaveSource,
+    effect::{AdsrEnvelope, AsyncEventReceiver, EventChannel, Fader},
+    font::SoundFontBuilder,
+    generator::{LfsrNoiseSource, SawtoothWaveSource, SquareWaveSource, TriangleWaveSource},
+    group::{CombinerSource, MixerSource, Polyphony},
+    Error, FontSource, GraphLoader, LoopRange, MidiDataSource, Node, NoteRange, SoundSource,
 };
 
 pub struct GraphAssetLoader<'a> {
@@ -36,13 +38,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
     fn load_source_recursive(
         &self,
         source: &SoundSource,
-    ) -> Result<
-        (
-            Vec<EventChannel>,
-            Box<dyn Node + Send + 'static>,
-        ),
-        Error,
-    > {
+    ) -> Result<(Vec<EventChannel>, Box<dyn Node + Send + 'static>), Error> {
         let (event_channels, consumer) = match source {
             SoundSource::Midi {
                 node_id,
@@ -56,7 +52,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                             .midi_assets
                             .get(handle.id())
                             .ok_or_else(|| Error::User(format!("File not loaded: {}", path)))?;
-                        util::midi_builder_from_bytes(*node_id, asset.bytes.as_slice())?
+                        asset.node.get().duplicate_without_sources()
                     }
                 };
                 let mut event_channels = vec![];
@@ -65,7 +61,10 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                     event_channels.extend(channels);
                     midi_builder = midi_builder.add_channel_source(*channel, font);
                 }
-                let source = midi_builder.build()?;
+                let mut source = midi_builder.build()?;
+                if let Some(node_id) = node_id {
+                    source.set_node_id(*node_id);
+                };
                 let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (event_channels, source)
             }
@@ -86,54 +85,63 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                         all_channels.extend(channels);
                         font_builder = font_builder.add_range(note_range, source)?;
                     }
-                    let source: Box<dyn Node + Send + 'static> =
-                        Box::new(font_builder.build());
+                    let source: Box<dyn Node + Send + 'static> = Box::new(font_builder.build());
                     (all_channels, source)
                 }
                 FontSource::Sf2FilePath {
                     path,
                     instrument_index,
+                    polyphony_voices,
                 } => {
                     let handle: Handle<Sf2FileSource> = self.asset_server.load(path);
                     let asset = self.sf2_assets.get(handle.id()).ok_or_else(|| {
                         Error::User(format!("Soundfont file not loaded: {}", path))
                     })?;
-                    let source = util::soundfont_from_bytes(
-                        *node_id,
-                        asset.bytes.as_slice(),
-                        *instrument_index,
-                    )?;
-                    let source: Box<dyn Node + Send + 'static> = Box::new(source);
+                    let mut source = asset.node.get().duplicate()?;
+                    if let Some(node_id) = node_id {
+                        source.set_node_id(*node_id);
+                    };
                     (vec![], source)
                 }
             },
             SoundSource::SquareWave {
                 node_id,
+                balance,
                 amplitude,
                 duty_cycle,
             } => {
-                let source = SquareWaveSource::new(*node_id, *amplitude, *duty_cycle);
+                let source = SquareWaveSource::new(*node_id, *balance, *amplitude, *duty_cycle);
                 let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (vec![], source)
             }
-            SoundSource::TriangleWave { node_id, amplitude } => {
-                let source = TriangleWaveSource::new(*node_id, *amplitude);
+            SoundSource::TriangleWave {
+                node_id,
+                balance,
+                amplitude,
+            } => {
+                let source = TriangleWaveSource::new(*node_id, *balance, *amplitude);
                 let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (vec![], source)
             }
-            SoundSource::SawtoothWave { node_id, amplitude } => {
-                let source = SawtoothWaveSource::new(*node_id, *amplitude);
+            SoundSource::SawtoothWave {
+                node_id,
+                balance,
+                amplitude,
+            } => {
+                let source = SawtoothWaveSource::new(*node_id, *balance, *amplitude);
                 let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (vec![], source)
             }
             SoundSource::LfsrNoise {
                 node_id,
+                balance,
                 amplitude,
                 inside_feedback,
                 note_for_16_shifts,
             } => {
                 let source = LfsrNoiseSource::new(
                     *node_id,
+                    *balance,
                     *amplitude,
                     *inside_feedback,
                     *note_for_16_shifts,
@@ -143,6 +151,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
             }
             SoundSource::SampleFilePath {
                 node_id,
+                balance,
                 path,
                 base_note,
                 looping,
@@ -153,22 +162,29 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                     .get(handle.id())
                     .ok_or_else(|| Error::User(format!("Loop file not loaded: {}", path)))?;
                 let loop_range = looping.as_ref().map(LoopRange::from_config);
-                let source =
-                    util::wav_from_bytes(asset.bytes.as_slice(), *base_note, loop_range, *node_id)?;
-                let source: Box<dyn Node + Send + 'static> = Box::new(source);
+                let mut source = asset.node.get().duplicate()?;
+                if let Some(node_id) = node_id {
+                    source.set_node_id(*node_id);
+                };
                 (vec![], source)
             }
-            SoundSource::OneShotFilePath { node_id, path } => {
+            SoundSource::OneShotFilePath {
+                node_id,
+                balance,
+                path,
+            } => {
                 let handle: Handle<OneShotFileSource> = self.asset_server.load(path);
                 let asset = self
                     .one_shot_assets
                     .get(handle.id())
                     .ok_or_else(|| Error::User(format!("One shot file not loaded: {}", path)))?;
-                let source = util::one_shot_from_bytes(asset.bytes.as_slice(), *node_id)?;
-                let source: Box<dyn Node + Send + 'static> = Box::new(source);
+                let mut source = asset.node.read().duplicate()?;
+                if let Some(node_id) = node_id {
+                    source.set_node_id(*node_id);
+                };
                 (vec![], source)
             }
-            SoundSource::Envelope {
+            SoundSource::AdsrEnvelope {
                 node_id,
                 attack_time,
                 decay_time,
@@ -177,7 +193,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                 source,
             } => {
                 let (channels, source) = self.load_source_recursive(source)?;
-                let source = Envelope::from_adsr(
+                let source = AdsrEnvelope::from_parameters(
                     *node_id,
                     *attack_time,
                     *decay_time,
@@ -210,6 +226,16 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                 let (more_channels, source_1) = self.load_source_recursive(source_1)?;
                 let source = MixerSource::new(*node_id, *balance, source_0, source_1);
                 channels.extend(more_channels);
+                let source: Box<dyn Node + Send + 'static> = Box::new(source);
+                (channels, source)
+            }
+            SoundSource::Polyphony {
+                node_id,
+                max_voices,
+                source,
+            } => {
+                let (channels, inner_source) = self.load_source_recursive(source)?;
+                let source = Polyphony::new(*node_id, *max_voices, inner_source)?;
                 let source: Box<dyn Node + Send + 'static> = Box::new(source);
                 (channels, source)
             }

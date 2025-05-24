@@ -1,7 +1,7 @@
 use crate::GraphAssetLoader;
 use bevy::prelude::*;
 use bevy::utils::synccell::SyncCell;
-use midi_graph::{BaseMixer, Config, Error, EventChannel, GraphLoader, SoundSource};
+use midi_graph::{BaseMixer, Config, Error, effect::EventChannel, GraphLoader, SoundSource};
 use std::collections::HashMap;
 use std::sync::Mutex;
 

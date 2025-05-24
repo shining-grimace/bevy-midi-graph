@@ -1,11 +1,13 @@
 use bevy::{
     asset::{io::Reader, AssetLoader, LoadContext},
     prelude::*,
+    utils::synccell::SyncCell,
 };
+use midi_graph::{midi::MidiSource, util::midi_builder_from_bytes};
 
 #[derive(Asset, TypePath)]
 pub struct MidiFileSource {
-    pub bytes: Vec<u8>,
+    pub node: SyncCell<MidiSource>,
 }
 
 #[derive(Default)]
@@ -23,7 +25,11 @@ impl AssetLoader for MidiFileSourceLoader {
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = vec![];
         reader.read_to_end(&mut bytes).await?;
-        Ok(MidiFileSource { bytes })
+        let builder = midi_builder_from_bytes(None, bytes.as_slice())?;
+        let node = builder.build()?;
+        Ok(MidiFileSource {
+            node: SyncCell::new(node),
+        })
     }
 
     fn extensions(&self) -> &[&str] {
