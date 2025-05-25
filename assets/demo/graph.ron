@@ -3,7 +3,7 @@
         node_id: Some(101),
         source: FilePath("demo/LoopingMidi.mid"),
         channels: {
-            0: Envelope(
+            0: AdsrEnvelope(
                 attack_time: 0.5,
                 decay_time: 1.0,
                 sustain_multiplier: 0.75,

@@ -45,26 +45,26 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                 source,
                 channels,
             } => {
-                let mut midi_builder = match source {
+                let mut midi = match source {
                     MidiDataSource::FilePath(path) => {
                         let handle: Handle<MidiFileSource> = self.asset_server.load(path);
                         let asset = self
                             .midi_assets
                             .get(handle.id())
-                            .ok_or_else(|| Error::User(format!("File not loaded: {}", path)))?;
-                        asset.node.get().duplicate_without_sources()
+                           .ok_or_else(|| Error::User(format!("File not loaded: {}", path)))?;
+                        asset.clone_node()?
                     }
                 };
-                for (channel, source) in channels.iter() {
-                    let font = self.load_source_with_dependencies(source)?;
-                    midi_builder = midi_builder.add_channel_source(*channel, font);
-                }
-                let mut source = midi_builder.build()?;
+                let channel_sources = channels.values()
+                    .map(|source| {
+                        self.load_source_with_dependencies(source)
+                    })
+                    .collect::<Result<Vec<Box<dyn Node + Send + 'static>>, Error>>()?;
+                midi.replace_children(&channel_sources)?;
                 if let Some(node_id) = node_id {
-                    source.set_node_id(*node_id);
+                    midi.set_node_id(*node_id);
                 };
-                let source: Box<dyn Node + Send + 'static> = Box::new(source);
-                source
+                midi
             }
             SoundSource::Font { node_id, config } => match config {
                 FontSource::Ranges(ranges) => {
@@ -86,7 +86,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                     let asset = self.sf2_assets.get(handle.id()).ok_or_else(|| {
                         Error::User(format!("Soundfont file not loaded: {}", path))
                     })?;
-                    let mut source = asset.node.get().duplicate()?;
+                    let mut source = asset.clone_node()?;
                     if let Some(node_id) = node_id {
                         source.set_node_id(*node_id);
                     };
@@ -151,7 +151,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                     .get(handle.id())
                     .ok_or_else(|| Error::User(format!("Loop file not loaded: {}", path)))?;
                 let loop_range = looping.as_ref().map(LoopRange::from_config);
-                let mut source = asset.node.get().duplicate()?;
+                let mut source = asset.clone_node()?;
                 if let Some(node_id) = node_id {
                     source.set_node_id(*node_id);
                 };
@@ -167,7 +167,7 @@ impl<'a> GraphLoader for GraphAssetLoader<'a> {
                     .one_shot_assets
                     .get(handle.id())
                     .ok_or_else(|| Error::User(format!("One shot file not loaded: {}", path)))?;
-                let mut source = asset.node.read().duplicate()?;
+                let mut source = asset.clone_node()?;
                 if let Some(node_id) = node_id {
                     source.set_node_id(*node_id);
                 };

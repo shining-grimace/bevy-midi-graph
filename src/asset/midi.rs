@@ -1,13 +1,22 @@
 use bevy::{
     asset::{io::Reader, AssetLoader, LoadContext},
     prelude::*,
-    utils::synccell::SyncCell,
 };
-use midi_graph::{midi::MidiSource, util::midi_builder_from_bytes};
+use midi_graph::{Node, Error, util::midi_builder_from_bytes};
+use std::sync::Mutex;
 
 #[derive(Asset, TypePath)]
 pub struct MidiFileSource {
-    pub node: SyncCell<MidiSource>,
+    pub node: Mutex<Box<dyn Node + Send + 'static>>,
+}
+
+impl MidiFileSource {
+    pub fn clone_node(&self) -> Result<Box<dyn Node + Send + 'static>, Error> {
+        let lock = self.node.lock()
+            .map_err(|e| Error::Internal(format!("Lock: {:?}", e)))?;
+        let node = lock.duplicate();
+        node
+    }
 }
 
 #[derive(Default)]
@@ -28,7 +37,7 @@ impl AssetLoader for MidiFileSourceLoader {
         let builder = midi_builder_from_bytes(None, bytes.as_slice())?;
         let node = builder.build()?;
         Ok(MidiFileSource {
-            node: SyncCell::new(node),
+            node: Mutex::new(Box::new(node)),
         })
     }
 

@@ -1,14 +1,25 @@
 use bevy::{
     asset::{io::Reader, AssetLoader, LoadContext},
     prelude::*,
-    utils::synccell::SyncCell,
 };
-use midi_graph::{generator::WavSource, util::wav_from_bytes, Balance, LoopRange};
+use midi_graph::{util::wav_from_bytes, Balance, Error, LoopRange, Node};
 use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
 
 #[derive(Asset, TypePath)]
 pub struct LoopFileSource {
-    pub node: SyncCell<WavSource>,
+    pub node: Mutex<Box<dyn Node + Send + 'static>>,
+}
+
+impl LoopFileSource {
+    pub fn clone_node(&self) -> Result<Box<dyn Node + Send + 'static>, Error> {
+        let lock = self
+            .node
+            .lock()
+            .map_err(|e| Error::Internal(format!("Lock: {:?}", e)))?;
+        let node = lock.duplicate();
+        node
+    }
 }
 
 #[derive(Default)]
@@ -18,7 +29,7 @@ pub struct LoopFileSourceLoader {}
 pub struct LoopFileSettings {
     pub source_note: u8,
     pub loop_range: Option<(usize, usize)>,
-    pub balance: Balance
+    pub balance: Balance,
 }
 
 impl Default for LoopFileSettings {
@@ -26,7 +37,7 @@ impl Default for LoopFileSettings {
         Self {
             source_note: 69,
             loop_range: None,
-            balance: Balance::Both
+            balance: Balance::Both,
         }
     }
 }
@@ -53,7 +64,7 @@ impl AssetLoader for LoopFileSourceLoader {
             None,
         )?;
         Ok(LoopFileSource {
-            node: SyncCell::new(node),
+            node: Mutex::new(Box::new(node)),
         })
     }
 

@@ -1,14 +1,25 @@
 use bevy::{
     asset::{io::Reader, AssetLoader, LoadContext},
     prelude::*,
-    utils::synccell::SyncCell,
 };
-use midi_graph::{font::SoundFont, util::soundfont_from_bytes};
+use midi_graph::{font::SoundFont, util::soundfont_from_bytes, Error, Node};
 use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
 
 #[derive(Asset, TypePath)]
 pub struct Sf2FileSource {
-    pub node: SyncCell<SoundFont>,
+    pub node: Mutex<SoundFont>,
+}
+
+impl Sf2FileSource {
+    pub fn clone_node(&self) -> Result<Box<dyn Node + Send + 'static>, Error> {
+        let lock = self
+            .node
+            .lock()
+            .map_err(|e| Error::Internal(format!("Lock: {:?}", e)))?;
+        let node = lock.duplicate();
+        node
+    }
 }
 
 #[derive(Default)]
@@ -39,7 +50,7 @@ impl AssetLoader for Sf2FileSourceLoader {
             settings.polyphony_voices,
         )?;
         Ok(Sf2FileSource {
-            node: SyncCell::new(node),
+            node: Mutex::new(node),
         })
     }
 

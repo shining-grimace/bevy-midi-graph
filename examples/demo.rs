@@ -4,7 +4,8 @@ use bevy_midi_graph::{
     GraphAssetLoader, LoopFileSource, MidiFileSource, MidiGraph, MidiGraphAudioContext,
     MidiGraphPlugin, OneShotFileSource, Sf2FileSource,
 };
-use midi_graph::{EventChannel, NodeControlEvent, NodeEvent};
+use midi_graph::{midi::CueData, Event, Message, EventTarget, MessageSender};
+use std::sync::Arc;
 
 const PLAYER_VELOCITY: f32 = 3.0;
 
@@ -28,6 +29,7 @@ pub fn main() {
         .insert_resource(AmbientLight {
             color: Color::WHITE,
             brightness: 1000.0,
+            ..default()
         })
         .add_systems(Startup, (initialise_assets, set_up_ui).chain())
         .add_systems(Update, (move_character, check_graph_ready))
@@ -126,8 +128,8 @@ fn move_character(
     mut player_velocity_query: Query<&mut LinearVelocity, With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut quit_signal: EventWriter<AppExit>,
-) {
-    let mut player_velocity = player_velocity_query.single_mut();
+) -> Result<(), BevyError> {
+    let mut player_velocity = player_velocity_query.single_mut()?;
     let left = keyboard_input.pressed(KeyCode::ArrowLeft);
     let right = keyboard_input.pressed(KeyCode::ArrowRight);
     let up = keyboard_input.pressed(KeyCode::ArrowUp);
@@ -156,8 +158,10 @@ fn move_character(
     *player_velocity = LinearVelocity(PLAYER_VELOCITY * input_velocity);
 
     if quit {
-        quit_signal.send(AppExit::Success);
+        quit_signal.write(AppExit::Success);
     }
+
+    Ok(())
 }
 
 fn check_intersections(
@@ -169,9 +173,9 @@ fn check_intersections(
     mut collision_ended_events: EventReader<CollisionEnded>,
     mut graphs: ResMut<Assets<MidiGraph>>,
     mut current_anchor: Local<u32>,
-) {
-    let player_entity = player_query.get_single().unwrap();
-    let sensor_entity = sensor_query.get_single().unwrap();
+) -> Result<(), BevyError> {
+    let player_entity = player_query.single()?;
+    let sensor_entity = sensor_query.single()?;
     let started = collision_started_events.read().any(|event| {
         (event.0 == player_entity && event.1 == sensor_entity)
             || (event.0 == sensor_entity && event.1 == player_entity)
@@ -185,25 +189,22 @@ fn check_intersections(
     } else if ended {
         DEFAULT_ANCHOR
     } else {
-        return;
+        return Ok(());
     };
     if *current_anchor != desired_track {
         *current_anchor = desired_track;
         let graph_id = asset_metadata.asset_handle.id();
         if let Some(graph) = graphs.get_mut(graph_id) {
-            let channel: &mut EventChannel = audio_context
-                .root_event_channel()
-                .unwrap()
-                .expect("No root event receiver on audio context");
-            let send = channel.try_send(NodeEvent::NodeControl {
-                node_id: MIDI_NODE_ID,
-                event: NodeControlEvent::SeekWhenIdeal {
-                    to_anchor: Some(desired_track),
-                },
+            let channel: Arc<MessageSender> = audio_context
+                .get_event_sender();
+            let send = channel.try_send(Message {
+                target: EventTarget::SpecificNode(MIDI_NODE_ID),
+                data: Event::CueData(CueData::SeekWhenIdeal(desired_track))
             });
             if let Err(err) = send {
                 panic!("{:?}", err);
             }
         }
     }
+    Ok(())
 }
