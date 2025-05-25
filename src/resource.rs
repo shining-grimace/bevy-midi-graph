@@ -1,11 +1,7 @@
 use crate::GraphAssetLoader;
 use bevy::prelude::*;
-use bevy::utils::synccell::SyncCell;
-use midi_graph::{BaseMixer, Config, Error, effect::EventChannel, GraphLoader, SoundSource};
-use std::collections::HashMap;
-use std::sync::Mutex;
-
-const NODE_ID_ROOT_EVENTS: u64 = 0x10000000f;
+use midi_graph::{BaseMixer, Config, Error, GraphLoader, MessageSender};
+use std::sync::{Arc, Mutex};
 
 pub struct SendMixer(BaseMixer);
 
@@ -14,15 +10,16 @@ unsafe impl Send for SendMixer {}
 #[derive(Resource)]
 pub struct MidiGraphAudioContext {
     mixer: Mutex<SendMixer>,
-    program_event_channels: SyncCell<HashMap<usize, Vec<EventChannel>>>,
+    event_sender: Arc<MessageSender>,
 }
 
 impl Default for MidiGraphAudioContext {
     fn default() -> Self {
         let mixer = BaseMixer::start_empty().unwrap();
+        let event_sender = mixer.get_event_sender();
         Self {
             mixer: Mutex::new(SendMixer(mixer)),
-            program_event_channels: SyncCell::new(HashMap::new()),
+            event_sender,
         }
     }
 }
@@ -45,11 +42,8 @@ impl MidiGraphAudioContext {
             }
             Ok(mixer) => mixer,
         };
-        let wrapped_config = Self::wrap_in_root_node(config);
-        let (channels, source) = loader.load_source_recursive(&wrapped_config.root)?;
+        let source = loader.load_source_with_dependencies(&config.root)?;
         let replaced_existing = mixer.0.store_program(program_no, source);
-        let existing_channels = self.program_event_channels.get();
-        let _ = existing_channels.insert(program_no, channels);
         Ok(replaced_existing)
     }
 
@@ -67,42 +61,7 @@ impl MidiGraphAudioContext {
         Ok(())
     }
 
-    pub fn root_event_channel(&mut self) -> Result<Option<&mut EventChannel>, Error> {
-        self.event_channel(NODE_ID_ROOT_EVENTS)
-    }
-
-    pub fn event_channel(&mut self, for_node_id: u64) -> Result<Option<&mut EventChannel>, Error> {
-        let mixer = match self.mixer.lock() {
-            Err(err) => {
-                return Err(Error::User(format!(
-                    "Mixer could not be locked to store program: {:?}",
-                    err
-                )));
-            }
-            Ok(mixer) => mixer,
-        };
-        let Some(program_no) = mixer.0.get_current_program_no() else {
-            return Ok(None);
-        };
-        let channels = self.program_event_channels.get();
-        let program_channels = match channels.get_mut(&program_no) {
-            Some(channels) => channels,
-            None => {
-                return Ok(None);
-            }
-        };
-        let channels = program_channels
-            .iter_mut()
-            .find(|channel| channel.for_node_id == for_node_id);
-        Ok(channels)
-    }
-
-    fn wrap_in_root_node(config: &Config) -> Config {
-        Config {
-            root: SoundSource::EventReceiver {
-                node_id: Some(NODE_ID_ROOT_EVENTS),
-                source: Box::new(config.root.clone()),
-            },
-        }
+    pub fn get_event_sender(&mut self) -> Arc<MessageSender> {
+        self.event_sender.clone()
     }
 }
