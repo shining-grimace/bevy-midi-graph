@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { version = "0.16.0" }
-ron = "0.8.1"
+bevy = { version = "0.16" }
+ron = "0.8"
 midi-graph = { git = "https://github.com/grimace87/midi-graph.git", rev = "4b65f1e3f76c8cf25db4c06771c309fac83cb726" }
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
-avian3d = "0.3.0"
+avian3d = "0.3"
