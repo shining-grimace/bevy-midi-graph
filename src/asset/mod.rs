@@ -1,11 +1,10 @@
 use std::fmt::Display;
 
-pub(crate) mod audio_loop;
 pub(crate) mod graph;
 pub(crate) mod loader;
 pub(crate) mod midi;
-pub(crate) mod one_shot;
 pub(crate) mod sf2;
+pub(crate) mod wave;
 
 #[derive(Debug)]
 pub struct AssetError(pub midi_graph::Error);

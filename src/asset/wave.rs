@@ -5,21 +5,21 @@ use bevy::{
 use std::sync::Mutex;
 
 #[derive(Asset, TypePath)]
-pub struct MidiFileSource {
+pub struct WaveFileSource {
     pub data: Mutex<Vec<u8>>,
 }
 
 #[derive(Default)]
-pub struct MidiFileSourceLoader;
+pub struct WaveFileSourceLoader;
 
-impl MidiFileSourceLoader {
+impl WaveFileSourceLoader {
     pub fn file_extensions<'a>() -> &'a [&'static str] {
-        &["mid", "midi", "smf"]
+        &["wav"]
     }
 }
 
-impl AssetLoader for MidiFileSourceLoader {
-    type Asset = MidiFileSource;
+impl AssetLoader for WaveFileSourceLoader {
+    type Asset = WaveFileSource;
     type Settings = ();
     type Error = midi_graph::Error;
     async fn load<'a>(
@@ -30,7 +30,7 @@ impl AssetLoader for MidiFileSourceLoader {
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = vec![];
         reader.read_to_end(&mut bytes).await?;
-        Ok(MidiFileSource {
+        Ok(WaveFileSource {
             data: Mutex::new(bytes),
         })
     }

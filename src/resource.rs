@@ -1,6 +1,5 @@
-use crate::GraphAssetLoader;
 use bevy::prelude::*;
-use midi_graph::{BaseMixer, Config, Error, GraphLoader, MessageSender};
+use midi_graph::{abstraction::NodeConfigData, AssetLoader, BaseMixer, Error, MessageSender};
 use std::sync::{Arc, Mutex};
 
 pub struct SendMixer(BaseMixer);
@@ -15,7 +14,7 @@ pub struct MidiGraphAudioContext {
 
 impl Default for MidiGraphAudioContext {
     fn default() -> Self {
-        let mixer = BaseMixer::start_empty().unwrap();
+        let mixer = BaseMixer::builder(|_| {}).unwrap().start(None).unwrap();
         let event_sender = mixer.get_event_sender();
         Self {
             mixer: Mutex::new(SendMixer(mixer)),
@@ -30,8 +29,8 @@ impl MidiGraphAudioContext {
     pub fn store_new_program(
         &mut self,
         program_no: usize,
-        config: &Config,
-        loader: &GraphAssetLoader,
+        config: &NodeConfigData,
+        loader: &dyn AssetLoader,
     ) -> Result<bool, Error> {
         let mut mixer = match self.mixer.lock() {
             Err(err) => {
@@ -42,8 +41,8 @@ impl MidiGraphAudioContext {
             }
             Ok(mixer) => mixer,
         };
-        let source = loader.load_source_with_dependencies(&config.root)?;
-        let replaced_existing = mixer.0.store_program(program_no, source);
+        let node = config.0.to_node(loader)?;
+        let replaced_existing = mixer.0.store_program(program_no, node);
         Ok(replaced_existing)
     }
 

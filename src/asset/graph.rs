@@ -1,23 +1,19 @@
 use crate::{
-    asset::{
-        audio_loop::LoopFileSource, midi::MidiFileSource, one_shot::OneShotFileSource,
-        sf2::Sf2FileSource,
-    },
-    GraphAssetLoader,
+    asset::{midi::MidiFileSource, sf2::Sf2FileSource, wave::WaveFileSource},
+    AssetType, GraphAssetLoader,
 };
 use bevy::{
     asset::{io::Reader, AssetLoader, LoadContext},
     prelude::*,
 };
-use midi_graph::{Config, FontSource, GraphLoader, MidiDataSource, SoundSource};
+use midi_graph::abstraction::NodeConfigData;
 
 #[derive(Asset, TypePath)]
 pub struct MidiGraph {
-    pub config: Config,
+    pub config: NodeConfigData,
     pub midi_assets: Vec<Handle<MidiFileSource>>,
     pub sf2_assets: Vec<Handle<Sf2FileSource>>,
-    pub loop_assets: Vec<Handle<LoopFileSource>>,
-    pub one_shot_assets: Vec<Handle<OneShotFileSource>>,
+    pub wave_assets: Vec<Handle<WaveFileSource>>,
 }
 
 #[derive(Default)]
@@ -33,56 +29,42 @@ impl AssetLoader for MidiGraphLoader {
         _settings: &(),
         load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
+        println!("Starting graph load...");
         let mut bytes = vec![];
         reader.read_to_end(&mut bytes).await?;
-        let config = match Config::from_bytes(&bytes) {
-            Ok(config) => config,
-            Err(midi_graph::Error::Ron(error)) => {
-                return Err(Self::Error::Ron(error));
-            }
-            Err(_) => {
-                return Err(Self::Error::User("Unknown error".to_owned()));
-            }
-        };
+        let root_config: NodeConfigData = serde_json::from_slice(&bytes)?;
+        println!("Core graph loaded");
 
         let mut midi_assets = vec![];
         let mut sf2_assets = vec![];
-        let mut loop_assets = vec![];
-        let mut one_shot_assets = vec![];
-        <GraphAssetLoader as GraphLoader>::traverse_sources(&config.root, |source| {
-            match source.clone() {
-                SoundSource::Midi {
-                    source: MidiDataSource::FilePath(path),
-                    ..
-                } => {
-                    let handle = load_context.loader().load(path);
-                    midi_assets.push(handle);
+        let mut wave_assets = vec![];
+        NodeConfigData::traverse_config_tree(&root_config, &mut |config: &NodeConfigData| {
+            if let Some(sub_asset_path) = config.0.asset_source() {
+                match GraphAssetLoader::infer_asset_type(sub_asset_path).unwrap() {
+                    AssetType::Midi => {
+                        println!("Queuing MIDI asset...");
+                        let handle = load_context.loader().load(sub_asset_path);
+                        midi_assets.push(handle);
+                    }
+                    AssetType::SoundFont => {
+                        println!("Queuing SoundFont asset...");
+                        let handle = load_context.loader().load(sub_asset_path);
+                        sf2_assets.push(handle);
+                    }
+                    AssetType::Wave => {
+                        println!("Queuing Wave asset...");
+                        let handle = load_context.loader().load(sub_asset_path);
+                        wave_assets.push(handle);
+                    }
                 }
-                SoundSource::Font {
-                    config: FontSource::Sf2FilePath { path, .. },
-                    ..
-                } => {
-                    let handle = load_context.loader().load(path);
-                    sf2_assets.push(handle);
-                }
-                SoundSource::SampleFilePath { path, .. } => {
-                    let handle = load_context.loader().load(path);
-                    loop_assets.push(handle);
-                }
-                SoundSource::OneShotFilePath { path, .. } => {
-                    let handle = load_context.loader().load(path);
-                    one_shot_assets.push(handle);
-                }
-                _ => {}
-            }
+            };
         });
 
         Ok(MidiGraph {
-            config,
+            config: root_config,
             midi_assets,
             sf2_assets,
-            loop_assets,
-            one_shot_assets,
+            wave_assets,
         })
     }
 }

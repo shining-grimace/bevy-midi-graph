@@ -1,15 +1,15 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_midi_graph::{
-    GraphAssetLoader, LoopFileSource, MidiFileSource, MidiGraph, MidiGraphAudioContext,
-    MidiGraphPlugin, OneShotFileSource, Sf2FileSource,
+    midi::event::{CueData, Event, EventTarget, Message, MessageSender},
+    GraphAssetLoader, MidiFileSource, MidiGraph, MidiGraphAudioContext, MidiGraphPlugin,
+    Sf2FileSource, WaveFileSource,
 };
-use midi_graph::{midi::CueData, Event, Message, EventTarget, MessageSender};
 use std::sync::Arc;
 
 const PLAYER_VELOCITY: f32 = 3.0;
 
-const MIDI_CONFIG: &str = "demo/graph.ron";
+const MIDI_CONFIG: &str = "demo/graph.json";
 const PROGRAM_NO: usize = 1;
 const MIDI_NODE_ID: u64 = 101;
 const DEFAULT_ANCHOR: u32 = 0;
@@ -78,6 +78,7 @@ fn set_up_ui(
     ));
     commands.spawn((
         Sensor,
+        CollisionEventsEnabled,
         Collider::cuboid(6.0, 6.0, 6.0),
         Mesh3d(meshes.add(Cuboid::new(6.0, 6.0, 6.0))),
         MeshMaterial3d(materials.add(StandardMaterial {
@@ -96,8 +97,7 @@ fn check_graph_ready(
     graphs: ResMut<Assets<MidiGraph>>,
     midi_assets: Res<Assets<MidiFileSource>>,
     sf2_assets: Res<Assets<Sf2FileSource>>,
-    loop_assets: Res<Assets<LoopFileSource>>,
-    one_shot_assets: Res<Assets<OneShotFileSource>>,
+    wave_assets: Res<Assets<WaveFileSource>>,
     mut graph_did_start: Local<bool>,
 ) {
     if *graph_did_start {
@@ -106,18 +106,14 @@ fn check_graph_ready(
     if !server.is_loaded_with_dependencies(asset_metadata.asset_handle.id()) {
         return;
     }
-    let loader = GraphAssetLoader::new(
-        &asset_server,
-        &midi_assets,
-        &sf2_assets,
-        &loop_assets,
-        &one_shot_assets,
-    );
-    *graph_did_start = true;
-    let asset = graphs.get(&asset_metadata.asset_handle).unwrap();
-    let program_existed = audio_context
-        .store_new_program(PROGRAM_NO, &asset.config, &loader)
-        .unwrap();
+    let program_existed = {
+        let loader = GraphAssetLoader::new(&asset_server, &midi_assets, &sf2_assets, &wave_assets);
+        *graph_did_start = true;
+        let asset = graphs.get(&asset_metadata.asset_handle).unwrap();
+        audio_context
+            .store_new_program(PROGRAM_NO, &asset.config, &loader)
+            .unwrap()
+    };
     if program_existed {
         panic!("Unexpectedly stored a program in an existing slot");
     }
@@ -185,8 +181,10 @@ fn check_intersections(
             || (event.0 == sensor_entity && event.1 == player_entity)
     });
     let desired_track = if started {
+        println!("Enter tension");
         ENTER_TENSION_ANCHOR
     } else if ended {
+        println!("Enter default");
         DEFAULT_ANCHOR
     } else {
         return Ok(());
@@ -195,11 +193,10 @@ fn check_intersections(
         *current_anchor = desired_track;
         let graph_id = asset_metadata.asset_handle.id();
         if let Some(graph) = graphs.get_mut(graph_id) {
-            let channel: Arc<MessageSender> = audio_context
-                .get_event_sender();
+            let channel: Arc<MessageSender> = audio_context.get_event_sender();
             let send = channel.try_send(Message {
                 target: EventTarget::SpecificNode(MIDI_NODE_ID),
-                data: Event::CueData(CueData::SeekWhenIdeal(desired_track))
+                data: Event::CueData(CueData::SeekWhenIdeal(desired_track)),
             });
             if let Err(err) = send {
                 panic!("{:?}", err);
