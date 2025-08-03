@@ -107,11 +107,12 @@ fn check_graph_ready(
         return;
     }
     let program_existed = {
-        let loader = GraphAssetLoader::new(&asset_server, &midi_assets, &sf2_assets, &wave_assets);
+        let mut loader =
+            GraphAssetLoader::new(&asset_server, &midi_assets, &sf2_assets, &wave_assets);
         *graph_did_start = true;
         let asset = graphs.get(&asset_metadata.asset_handle).unwrap();
         audio_context
-            .store_new_program(PROGRAM_NO, &asset.config, &loader)
+            .store_new_program(PROGRAM_NO, &asset.config, &mut loader)
             .unwrap()
     };
     if program_existed {

@@ -3,7 +3,7 @@ use crate::{
     WaveFileSourceLoader,
 };
 use bevy::prelude::*;
-use midi_graph::{AssetLoader, Error};
+use midi_graph::{AssetLoadPayload, AssetLoader, Error, SampleBuffer, SerializedFileMetadata};
 
 pub enum AssetType {
     Midi,
@@ -63,7 +63,7 @@ impl<'a> GraphAssetLoader<'a> {
 }
 
 impl<'a> AssetLoader for GraphAssetLoader<'a> {
-    fn load_asset_data(&self, path: &str) -> Result<Vec<u8>, Error> {
+    fn load_asset_data(&mut self, path: &str) -> Result<AssetLoadPayload, Error> {
         let asset_type = Self::infer_asset_type(path)?;
         match asset_type {
             AssetType::Midi => {
@@ -79,7 +79,7 @@ impl<'a> AssetLoader for GraphAssetLoader<'a> {
                     .lock()
                     .map_err(|e| Error::Internal(format!("Error locking asset data: {:?}", e)))?;
                 let cloned_data = locked.clone();
-                Ok(cloned_data)
+                Ok(AssetLoadPayload::RawAssetData(cloned_data))
             }
             AssetType::SoundFont => {
                 let handle = self.asset_server.get_handle(path).ok_or_else(|| {
@@ -94,7 +94,7 @@ impl<'a> AssetLoader for GraphAssetLoader<'a> {
                     .lock()
                     .map_err(|e| Error::Internal(format!("Error locking asset data: {:?}", e)))?;
                 let cloned_data = locked.clone();
-                Ok(cloned_data)
+                Ok(AssetLoadPayload::RawAssetData(cloned_data))
             }
             AssetType::Wave => {
                 let handle = self.asset_server.get_handle(path).ok_or_else(|| {
@@ -109,8 +109,17 @@ impl<'a> AssetLoader for GraphAssetLoader<'a> {
                     .lock()
                     .map_err(|e| Error::Internal(format!("Error locking asset data: {:?}", e)))?;
                 let cloned_data = locked.clone();
-                Ok(cloned_data)
+                Ok(AssetLoadPayload::RawAssetData(cloned_data))
             }
         }
+    }
+
+    fn store_prepared_data(
+        &mut self,
+        _path: &str,
+        _metadata: SerializedFileMetadata,
+        _sample_buffer: SampleBuffer,
+    ) {
+        panic!("Storing prepared data in GraphAssetLoader not supported")
     }
 }

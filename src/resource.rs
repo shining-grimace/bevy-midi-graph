@@ -14,7 +14,10 @@ pub struct MidiGraphAudioContext {
 
 impl Default for MidiGraphAudioContext {
     fn default() -> Self {
-        let mixer = BaseMixer::builder(|_| {}).unwrap().start(None).unwrap();
+        let mixer = BaseMixer::builder_with_default_registry()
+            .unwrap()
+            .start(None)
+            .unwrap();
         let event_sender = mixer.get_event_sender();
         Self {
             mixer: Mutex::new(SendMixer(mixer)),
@@ -30,7 +33,7 @@ impl MidiGraphAudioContext {
         &mut self,
         program_no: usize,
         config: &NodeConfigData,
-        loader: &dyn AssetLoader,
+        loader: &mut dyn AssetLoader,
     ) -> Result<bool, Error> {
         let mut mixer = match self.mixer.lock() {
             Err(err) => {
