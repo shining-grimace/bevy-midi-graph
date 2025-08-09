@@ -120,6 +120,7 @@ impl<'a> AssetLoader for GraphAssetLoader<'a> {
         _metadata: SerializedFileMetadata,
         _sample_buffer: SampleBuffer,
     ) {
-        panic!("Storing prepared data in GraphAssetLoader not supported")
+        // No need to cache in a separate mechanism here; assets already stored as Bevy Assets as
+        // needed
     }
 }

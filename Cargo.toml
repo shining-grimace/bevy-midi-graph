@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.16" }
-midi-graph = { git = "https://github.com/shining-grimace/midi-graph.git", rev = "7f61474042ac436e4d7119dd7594221ec5e1b45d" }
+midi-graph = { git = "https://github.com/shining-grimace/midi-graph.git", rev = "81c1d419bc03a1668f24e9259bee17961b857fab" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 

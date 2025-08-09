@@ -2,8 +2,7 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_midi_graph::{
     midi::event::{CueData, Event, EventTarget, Message, MessageSender},
-    GraphAssetLoader, MidiFileSource, MidiGraph, MidiGraphAudioContext, MidiGraphPlugin,
-    Sf2FileSource, WaveFileSource,
+    MidiGraphAudioContext, MidiGraphPlugin,
 };
 use std::sync::Arc;
 
@@ -18,11 +17,6 @@ const ENTER_TENSION_ANCHOR: u32 = 1;
 #[derive(Component)]
 struct Player;
 
-#[derive(Resource)]
-struct GraphAssetLoading {
-    pub asset_handle: Handle<MidiGraph>,
-}
-
 pub fn main() {
     App::new()
         .add_plugins((DefaultPlugins, PhysicsPlugins::default(), MidiGraphPlugin))
@@ -31,18 +25,18 @@ pub fn main() {
             brightness: 1000.0,
             ..default()
         })
-        .add_systems(Startup, (initialise_assets, set_up_ui).chain())
-        .add_systems(Update, (move_character, check_graph_ready))
+        .add_systems(Startup, (initialise_audio, set_up_ui).chain())
+        .add_systems(Update, move_character)
         .add_systems(PostUpdate, check_intersections)
         .run();
 }
 
-fn initialise_assets(world: &mut World) {
-    let asset_server = world.resource::<AssetServer>();
-    let resource = GraphAssetLoading {
-        asset_handle: asset_server.load(MIDI_CONFIG),
-    };
-    world.insert_resource(resource);
+fn initialise_audio(
+    mut commands: Commands,
+    mut audio_context: ResMut<MidiGraphAudioContext>,
+    asset_server: Res<AssetServer>,
+) {
+    audio_context.start_new_program(&mut commands, PROGRAM_NO, asset_server.load(MIDI_CONFIG));
 }
 
 fn set_up_ui(
@@ -89,38 +83,6 @@ fn set_up_ui(
     ));
 }
 
-fn check_graph_ready(
-    server: Res<AssetServer>,
-    mut audio_context: ResMut<MidiGraphAudioContext>,
-    asset_metadata: ResMut<GraphAssetLoading>,
-    asset_server: Res<AssetServer>,
-    graphs: ResMut<Assets<MidiGraph>>,
-    midi_assets: Res<Assets<MidiFileSource>>,
-    sf2_assets: Res<Assets<Sf2FileSource>>,
-    wave_assets: Res<Assets<WaveFileSource>>,
-    mut graph_did_start: Local<bool>,
-) {
-    if *graph_did_start {
-        return;
-    }
-    if !server.is_loaded_with_dependencies(asset_metadata.asset_handle.id()) {
-        return;
-    }
-    let program_existed = {
-        let mut loader =
-            GraphAssetLoader::new(&asset_server, &midi_assets, &sf2_assets, &wave_assets);
-        *graph_did_start = true;
-        let asset = graphs.get(&asset_metadata.asset_handle).unwrap();
-        audio_context
-            .store_new_program(PROGRAM_NO, &asset.config, &mut loader)
-            .unwrap()
-    };
-    if program_existed {
-        panic!("Unexpectedly stored a program in an existing slot");
-    }
-    audio_context.change_program(PROGRAM_NO).unwrap();
-}
-
 fn move_character(
     mut player_velocity_query: Query<&mut LinearVelocity, With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -161,14 +123,17 @@ fn move_character(
     Ok(())
 }
 
+/// Checks for entering or leaving the sensor, and changing the currently-playing section in those
+/// occasions.
+/// Note that if the audio asset hasn't finished loading yet, this won't do anything, so it's
+/// possible to be in the wrong section for what's going on in the game. Ideally we'd wait for the
+/// asset to load before enabling gameplay, but let's keep this example simple.
 fn check_intersections(
-    asset_metadata: Res<GraphAssetLoading>,
     mut audio_context: ResMut<MidiGraphAudioContext>,
     player_query: Query<Entity, With<Player>>,
     sensor_query: Query<Entity, With<Sensor>>,
     mut collision_started_events: EventReader<CollisionStarted>,
     mut collision_ended_events: EventReader<CollisionEnded>,
-    mut graphs: ResMut<Assets<MidiGraph>>,
     mut current_anchor: Local<u32>,
 ) -> Result<(), BevyError> {
     let player_entity = player_query.single()?;
@@ -192,16 +157,13 @@ fn check_intersections(
     };
     if *current_anchor != desired_track {
         *current_anchor = desired_track;
-        let graph_id = asset_metadata.asset_handle.id();
-        if let Some(graph) = graphs.get_mut(graph_id) {
-            let channel: Arc<MessageSender> = audio_context.get_event_sender();
-            let send = channel.try_send(Message {
-                target: EventTarget::SpecificNode(MIDI_NODE_ID),
-                data: Event::CueData(CueData::SeekWhenIdeal(desired_track)),
-            });
-            if let Err(err) = send {
-                panic!("{:?}", err);
-            }
+        let channel: Arc<MessageSender> = audio_context.get_event_sender();
+        let send = channel.try_send(Message {
+            target: EventTarget::SpecificNode(MIDI_NODE_ID),
+            data: Event::CueData(CueData::SeekWhenIdeal(desired_track)),
+        });
+        if let Err(err) = send {
+            panic!("{:?}", err);
         }
     }
     Ok(())

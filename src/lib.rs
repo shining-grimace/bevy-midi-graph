@@ -1,5 +1,6 @@
 mod asset;
 mod resource;
+mod state;
 
 use bevy::prelude::*;
 
@@ -22,7 +23,7 @@ pub mod midi {
     }
     pub mod node {
         pub use midi_graph::{
-            abstraction::{NodeConfig, NodeConfigData},
+            abstraction::{ChildConfig, NodeConfig},
             effect::*,
             generator::*,
             group::*,
@@ -44,6 +45,12 @@ impl Plugin for MidiGraphPlugin {
             .init_asset_loader::<Sf2FileSourceLoader>()
             .init_asset::<WaveFileSource>()
             .init_asset_loader::<WaveFileSourceLoader>()
-            .init_resource::<resource::MidiGraphAudioContext>();
+            .init_resource::<resource::MidiGraphAudioContext>()
+            .insert_state(state::AudioContextState::None)
+            .add_systems(
+                Update,
+                MidiGraphAudioContext::check_loading_asset
+                    .run_if(in_state(state::AudioContextState::Loading)),
+            );
     }
 }

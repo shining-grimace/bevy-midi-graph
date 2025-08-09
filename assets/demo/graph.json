@@ -2,15 +2,18 @@
   "type": "Midi",
   "node_id": 101,
   "source": {
-    "FilePath": "demo/LoopingMidi.mid"
+    "FilePath": {
+      "path": "demo/LoopingMidi.mid",
+      "track_index": 0
+    }
   },
   "channels": {
     "0": {
       "type": "AdsrEnvelope",
-      "attack_time": 0.5,
-      "decay_time": 1.0,
-      "sustain_multiplier": 0.75,
-      "release_time": 0.125,
+      "attack_time": 0.01,
+      "decay_time": 0.1,
+      "sustain_multiplier": 0.2,
+      "release_time": 0.1,
       "source": {
         "type": "LfsrNoise",
         "inside_feedback": false

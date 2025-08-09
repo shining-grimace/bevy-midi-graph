@@ -6,11 +6,11 @@ use bevy::{
     asset::{io::Reader, AssetLoader, LoadContext},
     prelude::*,
 };
-use midi_graph::abstraction::NodeConfigData;
+use midi_graph::abstraction::ChildConfig;
 
 #[derive(Asset, TypePath)]
 pub struct MidiGraph {
-    pub config: NodeConfigData,
+    pub config: ChildConfig,
     pub midi_assets: Vec<Handle<MidiFileSource>>,
     pub sf2_assets: Vec<Handle<Sf2FileSource>>,
     pub wave_assets: Vec<Handle<WaveFileSource>>,
@@ -32,13 +32,13 @@ impl AssetLoader for MidiGraphLoader {
         println!("Starting graph load...");
         let mut bytes = vec![];
         reader.read_to_end(&mut bytes).await?;
-        let root_config: NodeConfigData = serde_json::from_slice(&bytes)?;
+        let root_config: ChildConfig = serde_json::from_slice(&bytes)?;
         println!("Core graph loaded");
 
         let mut midi_assets = vec![];
         let mut sf2_assets = vec![];
         let mut wave_assets = vec![];
-        NodeConfigData::traverse_config_tree(&root_config, &mut |config: &NodeConfigData| {
+        ChildConfig::traverse_config_tree(&root_config, &mut |config: &ChildConfig| {
             if let Some(sub_asset_path) = config.0.asset_source() {
                 match GraphAssetLoader::infer_asset_type(sub_asset_path).unwrap() {
                     AssetType::Midi => {
