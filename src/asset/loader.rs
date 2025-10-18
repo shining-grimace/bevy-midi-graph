@@ -64,16 +64,17 @@ impl<'a> GraphAssetLoader<'a> {
 
 impl<'a> AssetLoader for GraphAssetLoader<'a> {
     fn load_asset_data(&mut self, path: &str) -> Result<AssetLoadPayload, Error> {
-        let asset_type = Self::infer_asset_type(path)?;
+        let path = path.to_owned();
+        let asset_type = Self::infer_asset_type(&path)?;
         match asset_type {
             AssetType::Midi => {
-                let handle = self.asset_server.get_handle(path).ok_or_else(|| {
-                    Error::User(format!("Asset has not started loading: {}", path))
+                let handle = self.asset_server.get_handle(&path).ok_or_else(|| {
+                    Error::User(format!("Asset has not started loading: {}", &path))
                 })?;
                 let asset_data = self
                     .midi_assets
                     .get(&handle)
-                    .ok_or_else(|| Error::User(format!("Asset not finished loading: {}", path)))?;
+                    .ok_or_else(|| Error::User(format!("Asset not finished loading: {}", &path)))?;
                 let locked = asset_data
                     .data
                     .lock()
@@ -82,13 +83,13 @@ impl<'a> AssetLoader for GraphAssetLoader<'a> {
                 Ok(AssetLoadPayload::RawAssetData(cloned_data))
             }
             AssetType::SoundFont => {
-                let handle = self.asset_server.get_handle(path).ok_or_else(|| {
-                    Error::User(format!("Asset has not started loading: {}", path))
+                let handle = self.asset_server.get_handle(&path).ok_or_else(|| {
+                    Error::User(format!("Asset has not started loading: {}", &path))
                 })?;
                 let asset_data = self
                     .sf2_assets
                     .get(&handle)
-                    .ok_or_else(|| Error::User(format!("Asset not finished loading: {}", path)))?;
+                    .ok_or_else(|| Error::User(format!("Asset not finished loading: {}", &path)))?;
                 let locked = asset_data
                     .data
                     .lock()
@@ -97,8 +98,8 @@ impl<'a> AssetLoader for GraphAssetLoader<'a> {
                 Ok(AssetLoadPayload::RawAssetData(cloned_data))
             }
             AssetType::Wave => {
-                let handle = self.asset_server.get_handle(path).ok_or_else(|| {
-                    Error::User(format!("Asset has not started loading: {}", path))
+                let handle = self.asset_server.get_handle(&path).ok_or_else(|| {
+                    Error::User(format!("Asset has not started loading: {}", &path))
                 })?;
                 let asset_data = self
                     .wave_assets

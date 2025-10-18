@@ -86,7 +86,7 @@ fn set_up_ui(
 fn move_character(
     mut player_velocity_query: Query<&mut LinearVelocity, With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut quit_signal: EventWriter<AppExit>,
+    mut quit_signal: MessageWriter<AppExit>,
 ) -> Result<(), BevyError> {
     let mut player_velocity = player_velocity_query.single_mut()?;
     let left = keyboard_input.pressed(KeyCode::ArrowLeft);
@@ -132,19 +132,19 @@ fn check_intersections(
     mut audio_context: ResMut<MidiGraphAudioContext>,
     player_query: Query<Entity, With<Player>>,
     sensor_query: Query<Entity, With<Sensor>>,
-    mut collision_started_events: EventReader<CollisionStarted>,
-    mut collision_ended_events: EventReader<CollisionEnded>,
+    mut collision_started_events: MessageReader<CollisionStart>,
+    mut collision_ended_events: MessageReader<CollisionEnd>,
     mut current_anchor: Local<u32>,
 ) -> Result<(), BevyError> {
     let player_entity = player_query.single()?;
     let sensor_entity = sensor_query.single()?;
     let started = collision_started_events.read().any(|event| {
-        (event.0 == player_entity && event.1 == sensor_entity)
-            || (event.0 == sensor_entity && event.1 == player_entity)
+        (event.collider1 == player_entity && event.collider2 == sensor_entity)
+            || (event.collider1 == sensor_entity && event.collider2 == player_entity)
     });
     let ended = collision_ended_events.read().any(|event| {
-        (event.0 == player_entity && event.1 == sensor_entity)
-            || (event.0 == sensor_entity && event.1 == player_entity)
+        (event.collider1 == player_entity && event.collider2 == sensor_entity)
+            || (event.collider1 == sensor_entity && event.collider2 == player_entity)
     });
     let desired_track = if started {
         println!("Enter tension");

@@ -40,7 +40,8 @@ impl AssetLoader for MidiGraphLoader {
         let mut wave_assets = vec![];
         ChildConfig::traverse_config_tree(&root_config, &mut |config: &ChildConfig| {
             if let Some(sub_asset_path) = config.0.asset_source() {
-                match GraphAssetLoader::infer_asset_type(sub_asset_path).unwrap() {
+                let sub_asset_path = sub_asset_path.to_owned();
+                match GraphAssetLoader::infer_asset_type(&sub_asset_path).unwrap() {
                     AssetType::Midi => {
                         println!("Queuing MIDI asset...");
                         let handle = load_context.loader().load(sub_asset_path);
