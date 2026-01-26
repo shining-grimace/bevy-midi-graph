@@ -9,7 +9,7 @@ pub struct MidiFileSource {
     pub data: Mutex<Vec<u8>>,
 }
 
-#[derive(Default)]
+#[derive(TypePath, Default)]
 pub struct MidiFileSourceLoader;
 
 impl MidiFileSourceLoader {

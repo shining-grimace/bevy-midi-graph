@@ -9,7 +9,7 @@ pub struct Sf2FileSource {
     pub data: Mutex<Vec<u8>>,
 }
 
-#[derive(Default)]
+#[derive(TypePath, Default)]
 pub struct Sf2FileSourceLoader;
 
 impl Sf2FileSourceLoader {

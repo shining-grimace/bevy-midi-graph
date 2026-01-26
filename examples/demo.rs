@@ -20,7 +20,7 @@ struct Player;
 pub fn main() {
     App::new()
         .add_plugins((DefaultPlugins, PhysicsPlugins::default(), MidiGraphPlugin))
-        .insert_resource(AmbientLight {
+        .insert_resource(GlobalAmbientLight {
             color: Color::WHITE,
             brightness: 1000.0,
             ..default()

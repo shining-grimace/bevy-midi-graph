@@ -9,7 +9,7 @@ pub struct WaveFileSource {
     pub data: Mutex<Vec<u8>>,
 }
 
-#[derive(Default)]
+#[derive(TypePath, Default)]
 pub struct WaveFileSourceLoader;
 
 impl WaveFileSourceLoader {

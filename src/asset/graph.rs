@@ -16,7 +16,7 @@ pub struct MidiGraph {
     pub wave_assets: Vec<Handle<WaveFileSource>>,
 }
 
-#[derive(Default)]
+#[derive(TypePath, Default)]
 pub struct MidiGraphLoader {}
 
 impl AssetLoader for MidiGraphLoader {
