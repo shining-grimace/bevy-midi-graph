@@ -44,17 +44,17 @@ impl AssetLoader for MidiGraphLoader {
                 match GraphAssetLoader::infer_asset_type(&sub_asset_path).unwrap() {
                     AssetType::Midi => {
                         println!("Queuing MIDI asset...");
-                        let handle = load_context.loader().load(sub_asset_path);
+                        let handle = load_context.load(sub_asset_path);
                         midi_assets.push(handle);
                     }
                     AssetType::SoundFont => {
                         println!("Queuing SoundFont asset...");
-                        let handle = load_context.loader().load(sub_asset_path);
+                        let handle = load_context.load(sub_asset_path);
                         sf2_assets.push(handle);
                     }
                     AssetType::Wave => {
                         println!("Queuing Wave asset...");
-                        let handle = load_context.loader().load(sub_asset_path);
+                        let handle = load_context.load(sub_asset_path);
                         wave_assets.push(handle);
                     }
                 }
