@@ -1,9 +1,10 @@
 use crate::{
-    state::AudioContextState, GraphAssetLoader, MidiFileSource, MidiGraph, Sf2FileSource,
-    WaveFileSource,
+    GraphAssetLoader, MidiFileSource, MidiGraph, Sf2FileSource, WaveFileSource,
+    state::AudioContextState,
 };
 use bevy::prelude::*;
-use midi_graph::{abstraction::ChildConfig, AssetLoader, BaseMixer, Error, MessageSender};
+use midi_graph::{AssetLoader, BaseMixer, Error, MessageSender, abstraction::ChildConfig};
+use serde_json::Value;
 use std::sync::{Arc, Mutex};
 
 pub struct SendMixer(BaseMixer);
@@ -123,6 +124,19 @@ impl MidiGraphAudioContext {
         };
         mixer.0.change_program(program_no)?;
         Ok(())
+    }
+
+    pub fn capture_node_state(&self, node_id: u64) -> Option<Result<Value, Error>> {
+        let mixer = match self.mixer.lock() {
+            Err(err) => {
+                return Some(Err(Error::User(format!(
+                    "Mixer could not be locked to capture state: {:?}",
+                    err
+                ))));
+            }
+            Ok(mixer) => mixer,
+        };
+        mixer.0.get_active_node_state_snapshot(node_id)
     }
 
     pub fn get_event_sender(&mut self) -> Arc<MessageSender> {
