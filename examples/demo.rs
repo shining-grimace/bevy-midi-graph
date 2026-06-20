@@ -1,8 +1,8 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_midi_graph::{
-    midi::event::{CueData, Event, EventTarget, Message, MessageSender},
     MidiGraphAudioContext, MidiGraphPlugin,
+    midi::event::{CueData, Event, EventTarget, EventTiming, Message, MessageSender},
 };
 use std::sync::Arc;
 
@@ -158,9 +158,10 @@ fn check_intersections(
     if *current_anchor != desired_track {
         *current_anchor = desired_track;
         let channel: Arc<MessageSender> = audio_context.get_event_sender();
-        let send = channel.try_send(Message {
+        let send = channel.send(Message {
             target: EventTarget::SpecificNode(MIDI_NODE_ID),
             data: Event::CueData(CueData::SeekWhenIdeal(desired_track)),
+            timing: EventTiming::Imprecise,
         });
         if let Err(err) = send {
             panic!("{:?}", err);

@@ -4,15 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies.bevy]
-version = "0.19.0-rc.3"
+version = "0.19.0"
 default-features = false
 features = ["bevy_asset", "bevy_state"]
 
 [dependencies]
-midi-graph = { git = "https://github.com/shining-grimace/midi-graph.git", rev = "5137ddc137d2e3e78185b2bb3a9b7cb845a29309" }
+midi-graph = { git = "https://github.com/shining-grimace/midi-graph.git", rev = "19407176617d51689548413ad99b020ed401f565" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 
 [dev-dependencies]
-bevy = { version = "0.19.0-rc.3" }
-avian3d = "0.6.1"
+bevy = { version = "0.19.0" }
+avian3d = "0.7.0"

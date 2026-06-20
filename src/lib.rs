@@ -17,8 +17,8 @@ pub use resource::MidiGraphAudioContext;
 pub mod midi {
     pub mod event {
         pub use midi_graph::{
-            Balance, Event, EventTarget, LoopRange, Message, MessageSender, MidiPlaybackState,
-            NoteRange, effect::ModulationProperty, midi::CueData,
+            Balance, Event, EventTarget, EventTiming, LoopRange, Message, MessageSender,
+            MidiPlaybackState, NoteRange, effect::ModulationProperty, midi::CueData,
         };
     }
     pub mod node {

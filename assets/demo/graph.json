@@ -21,7 +21,9 @@
     },
     "1": {
       "type": "SampleLoop",
-      "path": "demo/guitar-a2-48k-mono.wav",
+      "source": {
+        "FilePath": "demo/guitar-a2-48k-mono.wav"
+      },
       "base_note": 45,
       "looping": null
     }
