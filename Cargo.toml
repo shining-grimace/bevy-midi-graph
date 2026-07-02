@@ -9,7 +9,7 @@ default-features = false
 features = ["bevy_asset", "bevy_state"]
 
 [dependencies]
-midi-graph = { git = "https://github.com/shining-grimace/midi-graph.git", rev = "7eb974da1920107844ae9a75c67b1b582333f835" }
+midi-graph = { git = "https://github.com/shining-grimace/midi-graph.git", rev = "61eba9052d016402a09512ec8ca8911d6ba348d0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 

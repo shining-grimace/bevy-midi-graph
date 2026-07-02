@@ -3791,7 +3791,7 @@ dependencies = [
 [[package]]
 name = "midi-graph"
 version = "0.1.0"
-source = "git+https://github.com/shining-grimace/midi-graph.git?rev=7eb974da1920107844ae9a75c67b1b582333f835#7eb974da1920107844ae9a75c67b1b582333f835"
+source = "git+https://github.com/shining-grimace/midi-graph.git?rev=61eba9052d016402a09512ec8ca8911d6ba348d0#61eba9052d016402a09512ec8ca8911d6ba348d0"
 dependencies = [
  "biquad",
  "byteorder",

@@ -160,7 +160,7 @@ fn check_intersections(
         let channel: Arc<MessageSender> = audio_context.get_event_sender();
         let send = channel.send(Message {
             target: EventTarget::SpecificNode(MIDI_NODE_ID),
-            data: Event::CueData(CueData::SeekWhenIdeal(desired_track)),
+            event: Event::CueData(CueData::SeekWhenIdeal(desired_track)),
             timing: EventTiming::Imprecise,
         });
         if let Err(err) = send {
